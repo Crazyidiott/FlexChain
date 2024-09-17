@@ -8,3 +8,4 @@ storage_server
 orderer
 testdb/*
 consensus/*
+mydata/
