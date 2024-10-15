@@ -149,7 +149,11 @@ void *block_formation_thread(void *arg) {
     ClientContext context;
     context.set_wait_for_ready(true);
     CompletionQueue cq;
-    unique_ptr<ClientAsyncWriter<Block>> validator_stream(stub->Asyncsend_to_validator_stream(&context, &rsp, &cq, (void *)1));
+    unique_ptr<ClientAsyncWriter<Block>> validator_stream;
+    if (role == LEADER)
+    {
+        validator_stream = stub->Asyncsend_to_validator_stream(&context, &rsp, &cq, (void *)1);
+    }
     bool ok;
     void *got_tag;
     cq.Next(&got_tag, &ok);
