@@ -11,3 +11,4 @@ orderer
 testdb/*
 consensus/*
 mydata/
+update.sh

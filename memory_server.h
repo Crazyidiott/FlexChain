@@ -40,7 +40,7 @@ class RequestQueue {
    public:
     queue<struct ibv_wc> wc_queue;
     pthread_mutex_t mutex;
-    sem_t full;
+    sem_t full; //信号量，8字节对齐，union类型（共享同一块内存空间），long int _aligned用于骗编译器让它内存对齐
 
     RequestQueue() {
         pthread_mutex_init(&mutex, NULL);
