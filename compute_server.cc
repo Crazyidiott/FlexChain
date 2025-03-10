@@ -941,6 +941,7 @@ class ComputeCommImpl final : public ComputeComm::Service {
 };
 
 void run_server(const string &server_address, bool is_validator) {
+    //TODO 这里tg是根目录吗？
     std::filesystem::remove_all("/mydata/testdb");
 
     // options.create_if_missing = true;

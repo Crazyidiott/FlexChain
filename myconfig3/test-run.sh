@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Start storage server (in background)
-./storage_server -a 127.0.0.1:50051 -d ./mydata/testdb &
+./storage_server -a 127.0.0.1:50051 -d ../mydata/testdb &
 sleep 2
 
 # Start memory server (in background)

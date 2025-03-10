@@ -626,8 +626,8 @@ int main(int argc, char *argv[]) {
         }
 
         // Uncomment to run benchmarking client
-        // pthread_t client_id;
-        // pthread_create(&client_id, NULL, run_client, NULL);
+        pthread_t client_id;
+        pthread_create(&client_id, NULL, run_client, NULL);
 
         // Run leader node
         run_leader(server_addr, configfile);
