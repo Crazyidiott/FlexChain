@@ -23,13 +23,8 @@ cd $CLOUDLAB_HOME
 git clone --recurse-submodules https://github.com/google/leveldb.git
 cd leveldb
 mkdir -p build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build .
-sudo make install
-
-cd $CLOUDLAB_HOME/leveldb/build
-# cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17 ..
+# cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build .
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17 .. && cmake --build .
-cmake --build .
 sudo make install
 
 # build gRPC
