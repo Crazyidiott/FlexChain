@@ -2,9 +2,6 @@ PROJECT(flexchain)
 CMAKE_MINIMUM_REQUIRED (VERSION 3.0.0)
 SET(CMAKE_CXX_FLAGS "-g -Wall -std=c++17")
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(leveldb REQUIRED)

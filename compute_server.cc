@@ -771,6 +771,7 @@ void *validation_handler(void *arg) {
         pthread_mutex_unlock(&bq.mutex);
 
         for (int trans_id = 0; trans_id < block.transactions_size(); trans_id++) {
+            log_info(std_err,"enter the loop of validate transation.");
             validate_transaction(ctx, storage_client, compute_clients, block.block_id(), trans_id, block.transactions(trans_id));
         }
 
@@ -1000,6 +1001,8 @@ void run_server(const string &server_address, bool is_validator) {
         } else {
             // pthread_create(&tid[i], NULL, parallel_validation_worker, &ctxs[i]);
             pthread_create(&tid[i], NULL, validation_handler, &ctxs[i]);
+            log_info(stderr, "validation thread created.");
+
         }
         /* stick thread to a core for better performance */
         int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
@@ -1171,8 +1174,10 @@ int main(int argc, char *argv[]) {
         std::stringstream sstream(tmp[1]);
         if (tmp[0] == "num_qps_per_server") {
             sstream >> c_config_info.num_qps_per_server;
+            log_info(stderr,"set qps per server:%d", c_config_info.num_qps_per_server);
         } else if (tmp[0] == "num_sim_threads") {
             sstream >> c_config_info.num_sim_threads;
+            log_info(stderr,"set sim thread per server:%d", c_config_info.num_sim_threads);
         } else if (tmp[0] == "data_msg_size") {
             sstream >> c_config_info.data_msg_size;
         } else if (tmp[0] == "data_cache_size") {

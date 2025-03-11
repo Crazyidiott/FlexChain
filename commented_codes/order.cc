@@ -226,6 +226,7 @@ void *block_formation_thread(void *arg) {
     CompletionQueue cq;
     unique_ptr<ClientAsyncWriter<Block>> validator_stream;
     if (role == LEADER) {
+        log_info(stderr,"send validator stream...");
         validator_stream = stub->Asyncsend_to_validator_stream(&context, &rsp, &cq, (void *)1);
     }
     bool ok;
@@ -263,7 +264,7 @@ void *block_formation_thread(void *arg) {
             free(entry_ptr);
 
             // Add transaction to current block
-            log_debug(stderr, "[block_id = %d, trans_id = %d]: added transaction to block.", 
+            log_info(stderr, "[block_id = %d, trans_id = %d]: added transaction to block.", 
                       block_index, trans_index);
             Endorsement *transaction = block.add_transactions();
             if (!transaction->ParseFromString(serialized_transaction)) {
@@ -307,6 +308,7 @@ void *block_formation_thread(void *arg) {
                 // Send block to validator (if leader)
                 if (role == LEADER) {
                     validator_stream->Write(block, (void *)1);
+                    log_info(stderr,"write block into validator stream");
                     bool ok;
                     void *got_tag;
                     cq.Next(&got_tag, &ok);
