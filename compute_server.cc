@@ -771,7 +771,7 @@ void *validation_handler(void *arg) {
         pthread_mutex_unlock(&bq.mutex);
 
         for (int trans_id = 0; trans_id < block.transactions_size(); trans_id++) {
-            log_info(std_err,"enter the loop of validate transation.");
+            log_info(stderr,"enter the loop of validate transation.");
             validate_transaction(ctx, storage_client, compute_clients, block.block_id(), trans_id, block.transactions(trans_id));
         }
 
