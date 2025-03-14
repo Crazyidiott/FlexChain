@@ -181,13 +181,14 @@ void *block_formation_thread(void *arg) {
     unique_ptr<ComputeComm::Stub> stub;
 
     // Only the leader needs to connect to validator nodes
-    if (role == LEADER) {
+    if (role == LEADER) { 
         string validator_grpc_endpoint;
         fstream fs;
         string configfile = *(string *)(arg);
         fs.open(configfile, fstream::in);
         
         // Parse configuration file to get validator endpoint
+        //TODO 为什么validator只有一个
         for (string line; getline(fs, line);) {
             vector<string> tmp = split(line, "=");
             assert(tmp.size() == 2);
@@ -202,7 +203,7 @@ void *block_formation_thread(void *arg) {
     }
 
     // Open log file to read committed entries
-    ifstream log("./consensus/raft.log", ios::in);
+    ifstream log("./consensus/raft.log", ios::in | ios::binary);
     assert(log.is_open());
 
     // State variables for block formation

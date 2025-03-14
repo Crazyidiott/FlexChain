@@ -943,13 +943,13 @@ class ComputeCommImpl final : public ComputeComm::Service {
 
 void run_server(const string &server_address, bool is_validator) {
     //TODO 这里tg是根目录吗？
-    std::filesystem::remove_all("/mydata/testdb");
+    std::filesystem::remove_all("../mydata/testdb");
 
-    // options.create_if_missing = true;
-    // options.error_if_exists = true;
-    // options.write_buffer_size = 8192000000;
-    // leveldb::Status s = leveldb::DB::Open(options, "/mydata/testdb", &db);
-    // assert(s.ok());
+    options.create_if_missing = true;
+    options.error_if_exists = true;
+    options.write_buffer_size = 8192000000;
+    leveldb::Status s = leveldb::DB::Open(options, "../mydata/testdb", &db);
+    assert(s.ok());
 
     /* start the grpc server for ComputeComm service */
     ComputeCommImpl service;
