@@ -382,8 +382,8 @@ void *client_thread(void *arg) {
 }
 
 void *run_client(void *arg) {
-    pthread_t client_tid;
-    pthread_create(&client_tid, NULL, client_thread, NULL);
+    // pthread_t client_tid;
+    // pthread_create(&client_tid, NULL, client_thread, NULL);
 
     while (!ready_flag)
         ;
@@ -391,7 +391,7 @@ void *run_client(void *arg) {
     log_info(stderr, "*******************************benchmarking started*******************************");
     chrono::milliseconds before, after;
     before = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
-    sleep(10);
+    sleep(20);
     end_flag = 1;
     after = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
 
@@ -473,8 +473,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // pthread_t client_id;
-        // pthread_create(&client_id, NULL, run_client, NULL);
+        pthread_t client_id;
+        pthread_create(&client_id, NULL, run_client, NULL);
 
         run_leader(server_addr, configfile);
     } else if (role == FOLLOWER) {
