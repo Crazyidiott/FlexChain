@@ -676,11 +676,11 @@ void *simulation_handler(void *arg) {
         // cq.AsyncNext(&got_tag, &ok, gpr_time_0(GPR_CLOCK_REALTIME));
         cq.Next(&got_tag, &ok);
 
-        // orderer_stub->async()->send_to_leader(&context, &endorsement, &rsp, [](Status s) {});
-        // Status status = orderer_stub->send_to_leader(&context, endorsement, &rsp);
-        // if (!status.ok()) {
-        //     log_err("gRPC failed with error message: %s.", status.error_message().c_str());
-        // }
+        orderer_stub->async()->send_to_leader(&context, &endorsement, &rsp, [](Status s) {});
+        Status status = orderer_stub->send_to_leader(&context, endorsement, &rsp);
+        if (!status.ok()) {
+            log_err("gRPC failed with error message: %s.", status.error_message().c_str());
+        }
 
         // total_ops++;
     }
