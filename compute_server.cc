@@ -767,11 +767,11 @@ void *validation_handler(void *arg) {
         sem_wait(&bq.full);
         pthread_mutex_lock(&bq.mutex);
         Block block = bq.bq_queue.front();
+        log_info(stderr,"validator extracts block %d", block.block_id());
         bq.bq_queue.pop();
         pthread_mutex_unlock(&bq.mutex);
 
         for (int trans_id = 0; trans_id < block.transactions_size(); trans_id++) {
-            log_info(stderr,"enter the loop of validate transation.");
             validate_transaction(ctx, storage_client, compute_clients, block.block_id(), trans_id, block.transactions(trans_id));
         }
 
@@ -851,7 +851,7 @@ void *parallel_validation_manager(void *arg) {
                         break;
                     }
                 }
-
+ 
                 if (all_pred_in_c) {
                     it = W.erase(it);
 
@@ -898,6 +898,7 @@ class ComputeCommImpl final : public ComputeComm::Service {
 
         while (reader->Read(&block)) {
             pthread_mutex_lock(&bq.mutex);
+            log_info(stderr,"received block %d in validator stream", block.block_id());
             bq.bq_queue.push(block);
             pthread_mutex_unlock(&bq.mutex);
             sem_post(&bq.full);

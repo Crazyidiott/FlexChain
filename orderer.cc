@@ -59,53 +59,6 @@ void *log_replication_thread(void *arg) {
     }
 }
 
-bool has_rw_conflicts(int target_trans, int current_trans,
-                      const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
-    if (read_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
-        return false;
-    } else {
-        bool has_conflicts = false;
-        for (auto it = write_sets[current_trans].begin(); it != write_sets[current_trans].end(); it++) {
-            if (read_sets[target_trans].find(*it) != read_sets[target_trans].end()) {
-                has_conflicts = true;
-                break;
-            }
-        }
-        return has_conflicts;
-    }
-}
-
-bool has_ww_conflicts(int target_trans, int current_trans, const vector<unordered_set<string>> &write_sets) {
-    if (write_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
-        return false;
-    } else {
-        bool has_conflicts = false;
-        for (auto it = write_sets[current_trans].begin(); it != write_sets[current_trans].end(); it++) {
-            if (write_sets[target_trans].find(*it) != write_sets[target_trans].end()) {
-                has_conflicts = true;
-                break;
-            }
-        }
-        return has_conflicts;
-    }
-}
-
-bool has_wr_conflicts(int target_trans, int current_trans,
-                      const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
-    if (write_sets[target_trans].size() == 0 || read_sets[current_trans].size() == 0) {
-        return false;
-    } else {
-        bool has_conflicts = false;
-        for (auto it = write_sets[target_trans].begin(); it != write_sets[target_trans].end(); it++) {
-            if (read_sets[current_trans].find(*it) != read_sets[current_trans].end()) {
-                has_conflicts = true;
-                break;
-            }
-        }
-        return has_conflicts;
-    }
-}
-
 void *block_formation_thread(void *arg) {
     log_info(stderr, "Block formation thread is running.");
     /* set up grpc channels to validators */
@@ -154,6 +107,7 @@ void *block_formation_thread(void *arg) {
     if (role == LEADER)
     {
         validator_stream = stub->Asyncsend_to_validator_stream(&context, &rsp, &cq, (void *)1);
+        log_info(stderr,"initialize validator stream.");
     }
     bool ok;
     void *got_tag;
@@ -223,6 +177,7 @@ void *block_formation_thread(void *arg) {
                     // context.set_wait_for_ready(true);
 
                     validator_stream->Write(block, (void *)1);
+                    log_info(stderr,"orderer send block %d to validator", block.block_id());
                     bool ok;
                     void *got_tag;
                     // cq.AsyncNext(&got_tag, &ok, gpr_time_0(GPR_CLOCK_REALTIME));
@@ -285,6 +240,7 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
     Status send_to_leader(ServerContext *context, const Endorsement* endorsement, google::protobuf::Empty *response) override {
         pthread_mutex_lock(&tq.mutex);
         tq.trans_queue.emplace(endorsement->SerializeAsString());
+        log_info(stderr,"leader receives transaction from send_to_leader");
         pthread_mutex_unlock(&tq.mutex);
 
         return Status::OK;
@@ -295,6 +251,7 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
 
         while (reader->Read(&endorsement)) {
             pthread_mutex_lock(&tq.mutex);
+            log_info(stderr,"leader receives transaction from send_to_leader_stream");
             tq.trans_queue.emplace(endorsement.SerializeAsString());
             pthread_mutex_unlock(&tq.mutex);
         }
@@ -482,4 +439,51 @@ int main(int argc, char *argv[]) {
     }
 
     return 0;
+}
+
+bool has_rw_conflicts(int target_trans, int current_trans,
+    const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
+if (read_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
+return false;
+} else {
+bool has_conflicts = false;
+for (auto it = write_sets[current_trans].begin(); it != write_sets[current_trans].end(); it++) {
+if (read_sets[target_trans].find(*it) != read_sets[target_trans].end()) {
+has_conflicts = true;
+break;
+}
+}
+return has_conflicts;
+}
+}
+
+bool has_ww_conflicts(int target_trans, int current_trans, const vector<unordered_set<string>> &write_sets) {
+if (write_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
+return false;
+} else {
+bool has_conflicts = false;
+for (auto it = write_sets[current_trans].begin(); it != write_sets[current_trans].end(); it++) {
+if (write_sets[target_trans].find(*it) != write_sets[target_trans].end()) {
+has_conflicts = true;
+break;
+}
+}
+return has_conflicts;
+}
+}
+
+bool has_wr_conflicts(int target_trans, int current_trans,
+    const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
+if (write_sets[target_trans].size() == 0 || read_sets[current_trans].size() == 0) {
+return false;
+} else {
+bool has_conflicts = false;
+for (auto it = write_sets[target_trans].begin(); it != write_sets[target_trans].end(); it++) {
+if (read_sets[current_trans].find(*it) != read_sets[current_trans].end()) {
+has_conflicts = true;
+break;
+}
+}
+return has_conflicts;
+}
 }
