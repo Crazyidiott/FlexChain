@@ -353,10 +353,10 @@ void run_leader(const std::string &server_address, std::string configfile) {
         pthread_mutex_lock(&tq.mutex);
         int i = 0;
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
-            log_info(stderr,"write transaction into log");
             uint32_t size = tq.trans_queue.front().size();
             log.write((char *)&size, sizeof(uint32_t));
             log.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
+            log_info(stderr,"write transaction into log,write size is %d",size);
             tq.trans_queue.pop();
         }
         log.flush();
