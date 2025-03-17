@@ -59,6 +59,53 @@ void *log_replication_thread(void *arg) {
     }
 }
 
+bool has_rw_conflicts(int target_trans, int current_trans,
+                      const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
+    if (read_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
+        return false;
+    } else {
+        bool has_conflicts = false;
+        for (auto it = write_sets[current_trans].begin(); it != write_sets[current_trans].end(); it++) {
+            if (read_sets[target_trans].find(*it) != read_sets[target_trans].end()) {
+                has_conflicts = true;
+                break;
+            }
+        }
+        return has_conflicts;
+    }
+}
+
+bool has_ww_conflicts(int target_trans, int current_trans, const vector<unordered_set<string>> &write_sets) {
+    if (write_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
+        return false;
+    } else {
+        bool has_conflicts = false;
+        for (auto it = write_sets[current_trans].begin(); it != write_sets[current_trans].end(); it++) {
+            if (write_sets[target_trans].find(*it) != write_sets[target_trans].end()) {
+                has_conflicts = true;
+                break;
+            }
+        }
+        return has_conflicts;
+    }
+}
+
+bool has_wr_conflicts(int target_trans, int current_trans,
+                      const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
+    if (write_sets[target_trans].size() == 0 || read_sets[current_trans].size() == 0) {
+        return false;
+    } else {
+        bool has_conflicts = false;
+        for (auto it = write_sets[target_trans].begin(); it != write_sets[target_trans].end(); it++) {
+            if (read_sets[current_trans].find(*it) != read_sets[current_trans].end()) {
+                has_conflicts = true;
+                break;
+            }
+        }
+        return has_conflicts;
+    }
+}
+
 void *block_formation_thread(void *arg) {
     log_info(stderr, "Block formation thread is running.");
     /* set up grpc channels to validators */
@@ -91,7 +138,7 @@ void *block_formation_thread(void *arg) {
     int majority = follower_grpc_endpoints.size() / 2;
     int block_index = 0;
     int trans_index = 0;
-    size_t max_block_size = 200 * 1024;
+    size_t max_block_size = 2 * 1024;
     size_t curr_size = 0;
     int local_ops = 0;
 
@@ -272,7 +319,10 @@ void run_leader(const std::string &server_address, std::string configfile) {
     /* spawn replication threads and the block formation thread */
     pthread_t *repl_tids;
     repl_tids = (pthread_t *)malloc(sizeof(pthread_t) * follower_grpc_endpoints.size());
+
+    //用于存储线程
     struct ThreadContext *ctxs = (struct ThreadContext *)calloc(follower_grpc_endpoints.size(), sizeof(struct ThreadContext));
+
     for (int i = 0; i < follower_grpc_endpoints.size(); i++) {
         next_index.emplace_back(1);
         match_index.emplace_back(0);
@@ -281,6 +331,7 @@ void run_leader(const std::string &server_address, std::string configfile) {
         pthread_create(&repl_tids[i], NULL, log_replication_thread, &ctxs[i]);
         pthread_detach(repl_tids[i]);
     }
+
     pthread_t block_form_tid;
     pthread_create(&block_form_tid, NULL, block_formation_thread, &configfile);
     pthread_detach(block_form_tid);
@@ -299,6 +350,7 @@ void run_leader(const std::string &server_address, std::string configfile) {
         pthread_mutex_lock(&tq.mutex);
         int i = 0;
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
+            log_info(stderr,"write transaction into log");
             uint32_t size = tq.trans_queue.front().size();
             log.write((char *)&size, sizeof(uint32_t));
             log.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
@@ -434,56 +486,10 @@ int main(int argc, char *argv[]) {
         pthread_create(&client_id, NULL, run_client, NULL);
 
         run_leader(server_addr, configfile);
+
     } else if (role == FOLLOWER) {
         run_follower(server_addr);
     }
 
     return 0;
-}
-
-bool has_rw_conflicts(int target_trans, int current_trans,
-    const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
-if (read_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
-return false;
-} else {
-bool has_conflicts = false;
-for (auto it = write_sets[current_trans].begin(); it != write_sets[current_trans].end(); it++) {
-if (read_sets[target_trans].find(*it) != read_sets[target_trans].end()) {
-has_conflicts = true;
-break;
-}
-}
-return has_conflicts;
-}
-}
-
-bool has_ww_conflicts(int target_trans, int current_trans, const vector<unordered_set<string>> &write_sets) {
-if (write_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
-return false;
-} else {
-bool has_conflicts = false;
-for (auto it = write_sets[current_trans].begin(); it != write_sets[current_trans].end(); it++) {
-if (write_sets[target_trans].find(*it) != write_sets[target_trans].end()) {
-has_conflicts = true;
-break;
-}
-}
-return has_conflicts;
-}
-}
-
-bool has_wr_conflicts(int target_trans, int current_trans,
-    const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
-if (write_sets[target_trans].size() == 0 || read_sets[current_trans].size() == 0) {
-return false;
-} else {
-bool has_conflicts = false;
-for (auto it = write_sets[target_trans].begin(); it != write_sets[target_trans].end(); it++) {
-if (read_sets[current_trans].find(*it) != read_sets[current_trans].end()) {
-has_conflicts = true;
-break;
-}
-}
-return has_conflicts;
-}
 }
