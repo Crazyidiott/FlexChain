@@ -181,7 +181,6 @@ void *block_formation_thread(void *arg) {
             /* put the entry in current block and generate dependency graph */
             uint32_t size;
             log.read((char *)&size, sizeof(uint32_t));
-
             // log_info(stderr, "read data from the log, size: %d", size);
             char *entry_ptr = (char *)malloc(size);
             log.read(entry_ptr, size);
@@ -301,8 +300,8 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
 
         while (reader->Read(&endorsement)) {
             pthread_mutex_lock(&tq.mutex);
-            log_info(stderr,"leader receives transaction from send_to_leader_stream");
             tq.trans_queue.emplace(endorsement.SerializeAsString());
+            log_info(stderr,"leader receives transaction from send_to_leader_stream, %s", endorsement.SerializeAsString());
             pthread_mutex_unlock(&tq.mutex);
         }
 
