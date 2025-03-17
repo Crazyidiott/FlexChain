@@ -175,7 +175,7 @@ void *block_formation_thread(void *arg) {
             }
         }
 
-        log_info(stderr, "commit_index: %ld, last_applied: %ld",commit_index.load(),last_applied.load());
+        log_info(stderr, "commit_index: %ld, last_applied: %ld",commit_index.load(),last_applied);
         if (commit_index > last_applied) {
             last_applied++;
             /* put the entry in current block and generate dependency graph */
