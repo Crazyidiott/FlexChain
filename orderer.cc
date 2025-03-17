@@ -36,7 +36,11 @@ void *log_replication_thread(void *arg) {
             int index = 0;
             for (; index < LOG_ENTRY_BATCH && next_index[ctx.server_index] + index <= last_log_index; index++) {
                 uint32_t size;
+
+                log_info(stderr, "Before read: tellg=%lld", log.tellg());
                 log.read((char *)&size, sizeof(uint32_t));
+                log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d", log.tellg(), size, log.good(), log.fail());
+
                 char *entry_ptr = (char *)malloc(size);
                 log.read(entry_ptr, size);
                 app_req.add_log_entries(entry_ptr, size);
@@ -353,10 +357,13 @@ void run_leader(const std::string &server_address, std::string configfile) {
         int i = 0;
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
             uint32_t size = tq.trans_queue.front().size();
+
+            log_info(stderr, "Before write: tellp=%lld", log.tellp());
             log.write((char *)&size, sizeof(uint32_t));
-            log_info(stderr,"write transaction into log, write size is %d",sizeof(uint32_t));
+            log_info(stderr, "After write: tellp=%lld, good=%d, fail=%d", log.tellp(), log.good(), log.fail());
+
             log.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
-            log_info(stderr,"write transaction into log, write size is %d",size);
+
             tq.trans_queue.pop();
         }
         log.flush();
