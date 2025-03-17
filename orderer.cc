@@ -175,14 +175,14 @@ void *block_formation_thread(void *arg) {
             }
         }
 
-        log_info(stderr, "commit_index: %ld, last_applied: %ld",commit_index.load(),last_applied);
+        // log_info(stderr, "commit_index: %ld, last_applied: %ld",commit_index.load(),last_applied);
         if (commit_index > last_applied) {
             last_applied++;
             /* put the entry in current block and generate dependency graph */
             uint32_t size;
             log.read((char *)&size, sizeof(uint32_t));
 
-            log_info(stderr, "read data from the log, size: %d", size);
+            // log_info(stderr, "read data from the log, size: %d", size);
             char *entry_ptr = (char *)malloc(size);
             log.read(entry_ptr, size);
             curr_size += size;
