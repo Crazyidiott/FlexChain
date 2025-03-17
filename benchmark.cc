@@ -441,8 +441,8 @@ void prepopulate() {
 
 int64_t benchmark_throughput(bool is_validator) {
     log_info(stderr, "*******************************benchmarking started*******************************");
-    // pthread_t client_tid;
-    // pthread_create(&client_tid, NULL, client_thread, NULL);
+    pthread_t client_tid;
+    pthread_create(&client_tid, NULL, client_thread, NULL);
 
     // if (is_validator) {
     //     sleep(2);
