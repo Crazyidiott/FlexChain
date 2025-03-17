@@ -15,6 +15,7 @@ pthread_mutex_t logger_lock;
 atomic<bool> ready_flag = false;
 atomic<bool> end_flag = false;
 atomic<long> total_ops = 0;
+pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void *log_replication_thread(void *arg) {
     struct ThreadContext ctx = *(struct ThreadContext *)arg;
@@ -36,13 +37,18 @@ void *log_replication_thread(void *arg) {
             int index = 0;
             for (; index < LOG_ENTRY_BATCH && next_index[ctx.server_index] + index <= last_log_index; index++) {
                 uint32_t size;
-
+                
+                pthread_mutex_lock(&file_mutex);
                 log_info(stderr, "Before read: tellg=%lld", log.tellg());
                 log.read((char *)&size, sizeof(uint32_t));
                 log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d", log.tellg(), size, log.good(), log.fail());
+                pthread_mutex_unlock(&file_mutex);
 
+                pthread_mutex_lock(&file_mutex);
                 char *entry_ptr = (char *)malloc(size);
                 log.read(entry_ptr, size);
+                pthread_mutex_unlock(&file_mutex);
+
                 app_req.add_log_entries(entry_ptr, size);
                 free(entry_ptr);
             }
@@ -184,10 +190,17 @@ void *block_formation_thread(void *arg) {
             last_applied++;
             /* put the entry in current block and generate dependency graph */
             uint32_t size;
+
+            pthread_mutex_lock(&file_mutex);
             log.read((char *)&size, sizeof(uint32_t));
+            pthread_mutex_unlock(&file_mutex);
             // log_info(stderr, "read data from the log, size: %d", size);
             char *entry_ptr = (char *)malloc(size);
+
+            pthread_mutex_lock(&file_mutex);
             log.read(entry_ptr, size);
+            pthread_mutex_unlock(&file_mutex);
+
             curr_size += size;
             string serialized_transaction(entry_ptr, size);
             free(entry_ptr);
@@ -270,8 +283,12 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
         int i = 0;
         for (; i < request->log_entries_size(); i++) {
             uint32_t size = request->log_entries(i).size();
+
+            pthread_mutex_lock(&file_mutex);
             log.write((char *)&size, sizeof(uint32_t));
             log.write(request->log_entries(i).c_str(), size);
+            pthread_mutex_unlock(&file_mutex);
+
             last_log_index++;
         }
         log.flush();
@@ -358,11 +375,12 @@ void run_leader(const std::string &server_address, std::string configfile) {
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
             uint32_t size = tq.trans_queue.front().size();
 
+            pthread_mutex_lock(&file_mutex);
             log_info(stderr, "Before write: tellp=%lld", log.tellp());
             log.write((char *)&size, sizeof(uint32_t));
             log_info(stderr, "After write: tellp=%lld, good=%d, fail=%d", log.tellp(), log.good(), log.fail());
-
             log.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
+            pthread_mutex_unlock(&file_mutex);
 
             tq.trans_queue.pop();
         }
