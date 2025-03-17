@@ -22,7 +22,7 @@ void *log_replication_thread(void *arg) {
     shared_ptr<grpc::Channel> channel = grpc::CreateChannel(ctx.grpc_endpoint, grpc::InsecureChannelCredentials());
     unique_ptr<ConsensusComm::Stub> stub(ConsensusComm::NewStub(channel));
 
-    ifstream log("./consensus/raft.log", ios::in);
+    ifstream log("./consensus/raft.log", ios::in | ios::binary);
     assert(log.is_open());
 
     while (true) {
@@ -131,7 +131,7 @@ void *block_formation_thread(void *arg) {
         stub = ComputeComm::NewStub(channel);
     }
 
-    ifstream log("./consensus/raft.log", ios::in);
+    ifstream log("./consensus/raft.log", ios::in | ios::binary);
     assert(log.is_open());
 
     unsigned long last_applied = 0;
