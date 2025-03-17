@@ -484,8 +484,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // pthread_t client_id;
-        // pthread_create(&client_id, NULL, run_client, NULL);
+        pthread_t client_id;
+        pthread_create(&client_id, NULL, run_client, NULL);
 
         run_leader(server_addr, configfile);
 
