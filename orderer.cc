@@ -194,7 +194,7 @@ void *block_formation_thread(void *arg) {
             pthread_mutex_lock(&file_mutex);
             log.read((char *)&size, sizeof(uint32_t));
             pthread_mutex_unlock(&file_mutex);
-            // log_info(stderr, "read data from the log, size: %d", size);
+            log_info(stderr, "read data from the log, size: %d", size);
             char *entry_ptr = (char *)malloc(size);
 
             pthread_mutex_lock(&file_mutex);
@@ -376,9 +376,9 @@ void run_leader(const std::string &server_address, std::string configfile) {
             uint32_t size = tq.trans_queue.front().size();
 
             pthread_mutex_lock(&file_mutex);
-            log_info(stderr, "Before write: tellp=%lld", log.tellp());
+            // log_info(stderr, "Before write: tellp=%lld", log.tellp());
             log.write((char *)&size, sizeof(uint32_t));
-            log_info(stderr, "After write: tellp=%lld, good=%d, fail=%d", log.tellp(), log.good(), log.fail());
+            // log_info(stderr, "After write: tellp=%lld, good=%d, fail=%d", log.tellp(), log.good(), log.fail());
             log.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
             pthread_mutex_unlock(&file_mutex);
 
