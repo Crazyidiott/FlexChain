@@ -192,9 +192,11 @@ void *block_formation_thread(void *arg) {
             uint32_t size;
 
             pthread_mutex_lock(&file_mutex);
+
+            log_info(stderr, "Before read: tellg=%lld", log.tellg());
             log.read((char *)&size, sizeof(uint32_t));
+            log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d", log.tellg(), size, log.good(), log.fail());
             pthread_mutex_unlock(&file_mutex);
-            log_info(stderr, "read data from the log, size: %d", size);
             char *entry_ptr = (char *)malloc(size);
 
             pthread_mutex_lock(&file_mutex);
