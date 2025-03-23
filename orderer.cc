@@ -433,7 +433,7 @@ void *run_client(void *arg) {
     after = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
 
     void *status;
-    // pthread_join(client_tid, &status);
+    pthread_join(client_tid, &status);
 
     while (total_ops == 0)
         ;
@@ -510,8 +510,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // pthread_t client_id;
-        // pthread_create(&client_id, NULL, run_client, NULL);
+        pthread_t client_id;
+        pthread_create(&client_id, NULL, run_client, NULL);
 
         run_leader(server_addr, configfile);
 
