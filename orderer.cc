@@ -134,15 +134,17 @@ void *block_formation_thread(void *arg) {
             last_applied++;
             /* put the entry in current block and generate dependency graph */
             uint32_t size;
-            // log_info(stderr, "Before read: tellg=%lld", logi.tellg());
+            std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read((char *)&size, sizeof(uint32_t));
-            // log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d",
-                // logi.tellg(), size, logi.good(), logi.fail());
+            std::cout << "After read: tellg=" << logi.tellg() << std::endl;
             
             
 
             char *entry_ptr = (char *)malloc(size);
+
+            std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read(entry_ptr, size);
+            std::cout << "After read: tellg=" << logi.tellg() << std::endl;
 
             curr_size += size;
             string serialized_transaction(entry_ptr, size);
@@ -312,11 +314,9 @@ void run_leader(const std::string &server_address, std::string configfile) {
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
             uint32_t size = tq.trans_queue.front().size();
 
-            log_info(stderr, "Before write: tellp=%lld", logo.tellp());
-            std::cout << "Before write: tellP=" << logo.tellp() << std::endl;  
+            // std::cout << "Before write: tellP=" << logo.tellp() << std::endl;  
             logo.write((char *)&size, sizeof(uint32_t));
-            log_info(stderr, "After write: tellp=%lld, size=%d, good=%d, fail=%d",logo.tellp(), size, logo.good(), logo.fail());
-            std::cout << "After write: tellp=" << logo.tellp() << ",size=" << size << ",good=" << logo.good() << ",fail=" << logo.fail() << std::endl;
+            // std::cout << "After write: tellp=" << logo.tellp() << ",size=" << size << ",good=" << logo.good() << ",fail=" << logo.fail() << std::endl;
 
             
             logo.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
