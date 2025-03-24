@@ -148,7 +148,7 @@ void *block_formation_thread(void *arg) {
             string serialized_transaction(entry_ptr, size);
             free(entry_ptr);
 
-            abort();
+            // abort();
 
             /* build dependency graph */
             log_debug(stderr, "[block_id = %d, trans_id = %d]: added transaction to block.", block_index, trans_index);
