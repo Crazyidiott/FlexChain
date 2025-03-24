@@ -298,16 +298,14 @@ void run_leader(const std::string &server_address, std::string configfile) {
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
             uint32_t size = tq.trans_queue.front().size();
 
-            // log_info(stderr, "Before write: tellp=%lld", logo.tellp());
+            log_info(stderr, "Before write: tellp=%lld", logo.tellp());
             std::cout << "Before write: tellP=" << logo.tellp() << std::endl;  
             logo.write((char *)&size, sizeof(uint32_t));
-            // log_info(stderr, "After write: tellp=%lld, size=%d, good=%d, fail=%d",logo.tellp(), size, logo.good(), logo.fail());
+            log_info(stderr, "After write: tellp=%lld, size=%d, good=%d, fail=%d",logo.tellp(), size, logo.good(), logo.fail());
             std::cout << "After write: tellp=" << logo.tellp() << ",size=" << size << ",good=" << logo.good() << ",fail=" << logo.fail() << std::endl;
 
             
             logo.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
-
-
 
             tq.trans_queue.pop();
         }
