@@ -283,6 +283,19 @@ void run_leader(const std::string &server_address, std::string configfile) {
     pthread_create(&block_form_tid, NULL, block_formation_thread, &configfile);
     pthread_detach(block_form_tid);
 
+    /* spawn replication threads and the block formation thread */
+    pthread_t *repl_tids;
+    repl_tids = (pthread_t *)malloc(sizeof(pthread_t) * follower_grpc_endpoints.size());
+    struct ThreadContext *ctxs = (struct ThreadContext *)calloc(follower_grpc_endpoints.size(), sizeof(struct ThreadContext));
+    for (int i = 0; i < follower_grpc_endpoints.size(); i++) {
+        next_index.emplace_back(1);
+        match_index.emplace_back(0);
+        ctxs[i].grpc_endpoint = follower_grpc_endpoints[i];
+        ctxs[i].server_index = i;
+        // pthread_create(&repl_tids[i], NULL, log_replication_thread, &ctxs[i]);
+        // pthread_detach(repl_tids[i]);
+    }
+
     /* start the grpc server for ConsensusComm */
     ConsensusCommImpl service;
     ServerBuilder builder;
