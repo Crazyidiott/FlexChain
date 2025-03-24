@@ -144,7 +144,7 @@ void *block_formation_thread(void *arg) {
 
             std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read(entry_ptr, size);
-            std::cout << "After read: tellg=" << logi.tellg() << std::endl;
+            std::cout << "After read: tellg=" << logi.tellg() << ",size=" << size << ",good=" << logi.good() << ",fail=" << logi.fail() << std::endl;
 
             curr_size += size;
             string serialized_transaction(entry_ptr, size);
