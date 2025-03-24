@@ -141,22 +141,22 @@ void *block_formation_thread(void *arg) {
             if (logi.eof() || !logi.good()) {
                 // 文件结束或读取错误，稍后重试
                 // std::cout << "End of file reached or read error. Retrying..." << std::endl;
-                std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+                std::this_thread::sleep_for(std::chrono::nanoseconds(10));
                 logi.clear();
                 continue;
             }
             // control the delay.../////
 
 
-            std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
+            // std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read((char *)&size, sizeof(uint32_t));
-            std::cout << "After read: tellg=" << logi.tellg() << ",size=" << size << ",good=" << logi.good() << ",fail=" << logi.fail() << std::endl;
+            // std::cout << "After read: tellg=" << logi.tellg() << ",size=" << size << ",good=" << logi.good() << ",fail=" << logi.fail() << std::endl;
 
             char *entry_ptr = (char *)malloc(size);
 
-            std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
+            // std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read(entry_ptr, size);
-            std::cout << "After read: tellg=" << logi.tellg() << ",size=" << size << ",good=" << logi.good() << ",fail=" << logi.fail() << std::endl;
+            // std::cout << "After read: tellg=" << logi.tellg() << ",size=" << size << ",good=" << logi.good() << ",fail=" << logi.fail() << std::endl;
 
             curr_size += size;
             string serialized_transaction(entry_ptr, size);
