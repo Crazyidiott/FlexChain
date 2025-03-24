@@ -91,7 +91,7 @@ void *block_formation_thread(void *arg) {
         stub = ComputeComm::NewStub(channel);
     }
 
-    ifstream log("./consensus/raft.log", ios::in | ios::binary);
+    // ifstream log("./consensus/raft.log", ios::in | ios::binary);
     assert(log.is_open());
 
     unsigned long last_applied = 0;
@@ -244,7 +244,7 @@ void *block_formation_thread(void *arg) {
 
 class ConsensusCommImpl final : public ConsensusComm::Service {
    public:
-    explicit ConsensusCommImpl() : log("./consensus/raft.log", ios::out | ios::binary) {}
+    // explicit ConsensusCommImpl() : log("./consensus/raft.log", ios::out | ios::binary) {}
 
     /* implementation of AppendEntriesRPC */
     Status append_entries(ServerContext *context, const AppendRequest *request, AppendResponse *response) override {
@@ -303,7 +303,7 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
     }
 
    private:
-    ofstream log;
+    // ofstream log;
 };
 
 void run_leader(const std::string &server_address, std::string configfile) {
@@ -491,8 +491,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // pthread_t client_id;
-        // pthread_create(&client_id, NULL, run_client, NULL);
+        pthread_t client_id;
+        pthread_create(&client_id, NULL, run_client, NULL);
 
         run_leader(server_addr, configfile);
 
