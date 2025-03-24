@@ -142,6 +142,7 @@ void *block_formation_thread(void *arg) {
                 // 文件结束或读取错误，稍后重试
                 // std::cout << "End of file reached or read error. Retrying..." << std::endl;
                 std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+                logi.clear();
                 continue;
             }
             // control the delay.../////
