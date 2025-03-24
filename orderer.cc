@@ -134,14 +134,23 @@ void *block_formation_thread(void *arg) {
             last_applied++;
             /* put the entry in current block and generate dependency graph */
             uint32_t size;
-            if(logi.tellg() == -1)
-                logi.clear();
+            
+            // control the delay.../////
+            // if(logi.tellg() == -1)
+            //     logi.clear();
 
+            if (logfile.eof() || !logfile.good()) {
+                // 文件结束或读取错误，稍后重试
+                // std::cout << "End of file reached or read error. Retrying..." << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            }
+            // control the delay.../////
+
+            
             std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read((char *)&size, sizeof(uint32_t));
-            std::cout << "After read: tellg=" << logi.tellg() << std::endl;
-            
-            
+            std::cout << "After read: tellg=" << logi.tellg() << ",size=" << size << ",good=" << logi.good() << ",fail=" << logi.fail() << std::endl;
 
             char *entry_ptr = (char *)malloc(size);
 

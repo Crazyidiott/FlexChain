@@ -279,7 +279,7 @@ string get_balance_str(uint64_t balance, size_t length) {
 }
 
 void *client_thread(void *arg) {
-    int trans_per_interval = 500;
+    int trans_per_interval = 5000;
     int interval = 50000;
 
     default_random_engine generator;
@@ -452,9 +452,9 @@ int64_t benchmark_throughput(bool is_validator) {
     chrono::milliseconds before, after;
     before = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
     if (is_validator) {
-        sleep(60);
+        sleep(10);
     } else {
-        sleep(60);
+        sleep(10);
     }
     
     end_flag = 1;
