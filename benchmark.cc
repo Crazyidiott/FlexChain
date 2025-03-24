@@ -452,9 +452,9 @@ int64_t benchmark_throughput(bool is_validator) {
     chrono::milliseconds before, after;
     before = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
     if (is_validator) {
-        sleep(10);
+        sleep(30);
     } else {
-        sleep(10);
+        sleep(30);
     }
     
     end_flag = 1;
