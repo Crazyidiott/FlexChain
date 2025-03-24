@@ -299,10 +299,10 @@ void run_leader(const std::string &server_address, std::string configfile) {
             uint32_t size = tq.trans_queue.front().size();
 
             // log_info(stderr, "Before write: tellp=%lld", logo.tellp());
-            std::cout << "Before read: tellP=" << logo.tellp() << std::endl;  
+            std::cout << "Before write: tellP=" << logo.tellp() << std::endl;  
             logo.write((char *)&size, sizeof(uint32_t));
             // log_info(stderr, "After write: tellp=%lld, size=%d, good=%d, fail=%d",logo.tellp(), size, logo.good(), logo.fail());
-            std::cout << "After read: tellp=" << logo.tellp() << ",size=" << size << ",good=" << logo.good() << ",fail=" << logo.fail() << std::endl;
+            std::cout << "After write: tellp=" << logo.tellp() << ",size=" << size << ",good=" << logo.good() << ",fail=" << logo.fail() << std::endl;
 
             
             logo.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
@@ -437,8 +437,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        pthread_t client_id;
-        pthread_create(&client_id, NULL, run_client, NULL);
+        // pthread_t client_id;
+        // pthread_create(&client_id, NULL, run_client, NULL);
 
         run_leader(server_addr, configfile);
     } else if (role == FOLLOWER) {

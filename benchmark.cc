@@ -441,8 +441,8 @@ void prepopulate() {
 
 int64_t benchmark_throughput(bool is_validator) {
     log_info(stderr, "*******************************benchmarking started*******************************");
-    // pthread_t client_tid;
-    // pthread_create(&client_tid, NULL, client_thread, NULL);
+    pthread_t client_tid;
+    pthread_create(&client_tid, NULL, client_thread, NULL);
 
     // if (is_validator) {
     //     sleep(2);
@@ -461,7 +461,7 @@ int64_t benchmark_throughput(bool is_validator) {
     after = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
 
     void *status;
-    // pthread_join(client_tid, &status);
+    pthread_join(client_tid, &status);
     log_info(stderr, "*******************************benchmarking completed*******************************");
     return (after - before).count();
 }
