@@ -146,6 +146,7 @@ void *block_formation_thread(void *arg) {
             // log.read(entry_ptr, size);
             
             pthread_mutex_lock(&file_mutex);
+            global_log_file.clear(); 
             log_info(stderr, "Before read: tellg=%lld", global_log_file.tellg());
             global_log_file.read((char *)&size, sizeof(uint32_t));
             log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d", 
@@ -155,6 +156,7 @@ void *block_formation_thread(void *arg) {
             char *entry_ptr = (char *)malloc(size);
 
             pthread_mutex_lock(&file_mutex);
+            global_log_file.clear(); 
             global_log_file.read(entry_ptr, size);
             pthread_mutex_unlock(&file_mutex);
 
