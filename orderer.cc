@@ -311,7 +311,7 @@ void run_leader(const std::string &server_address, std::string configfile) {
     std::filesystem::create_directory("./consensus");
 
     // ofstream log("./consensus/raft.log", ios::out | ios::binary);
-    global_log_file.open("./consensus/raft.log", ios::in | ios::out | ios::binary | ios::trunc);
+    global_log_file.open("./consensus/raft.log", ios::in | ios::out | ios::binary);
     assert(global_log_file.is_open());
 
     /* spawn replication threads and the block formation thread */
