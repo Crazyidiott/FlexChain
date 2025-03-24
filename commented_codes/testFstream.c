@@ -115,7 +115,7 @@ void batch_processing_thread() {
             char *entry_ptr = (char *)malloc(size);
 
             logfile.read(entry_ptr, size);
-            entry_ptr[size] = '\0'; // 添加字符串结束符
+            // entry_ptr[size] = '\0'; // 添加字符串结束符
             
             // 添加到批处理中
             std::string transaction(entry_ptr, size);
