@@ -259,7 +259,7 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
     }
 
    private:
-    ofstream log;
+    ofstream logoo;
 };
 
 void run_leader(const std::string &server_address, std::string configfile) {
