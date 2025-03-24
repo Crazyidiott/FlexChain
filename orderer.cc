@@ -134,6 +134,9 @@ void *block_formation_thread(void *arg) {
             last_applied++;
             /* put the entry in current block and generate dependency graph */
             uint32_t size;
+            if(logi.tellg() == -1)
+                logi.clear();
+                
             std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read((char *)&size, sizeof(uint32_t));
             std::cout << "After read: tellg=" << logi.tellg() << std::endl;
