@@ -50,7 +50,10 @@ void write_log_thread() {
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
             // 写入交易大小
             uint32_t size = tq.trans_queue.front().size();
+            std::cout << "Before read: tellP=" << logfile.tellp() << std::endl;  
+            
             logfile.write(reinterpret_cast<char*>(&size), sizeof(uint32_t));
+            std::cout << "After read: tellp=" << logfile.tellp() << ",size=" << size << ",good=" << logfile.good() << ",fail=" << logfile.fail() << std::endl;
             
             // 写入交易内容
             logfile.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
@@ -99,11 +102,11 @@ void batch_processing_thread() {
             
             // 读取交易大小
             uint32_t size;
-            std::cout << "Before read: tellg=" << logfile.tellg() << std::endl;
+            // std::cout << "Before read: tellg=" << logfile.tellg() << std::endl;
             // logfile.read(reinterpret_cast<char*>(&size), sizeof(uint32_t));
             logfile.read((char *)&size, sizeof(uint32_t));
 
-            std::cout << "After read: tellg=" << logfile.tellg() << ",size=" << size << ",good=" << logfile.good() << ",fail=" << logfile.fail() << std::endl;
+            // std::cout << "After read: tellg=" << logfile.tellg() << ",size=" << size << ",good=" << logfile.good() << ",fail=" << logfile.fail() << std::endl;
             
             if (logfile.eof() || !logfile.good()) {
                 // 文件结束或读取错误，稍后重试
