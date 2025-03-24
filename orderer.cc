@@ -1,5 +1,4 @@
 #include "orderer.h"
-
 #include "log.h"
 #include "utils.h"
 
@@ -139,7 +138,7 @@ void *block_formation_thread(void *arg) {
             // if(logi.tellg() == -1)
             //     logi.clear();
 
-            if (logfile.eof() || !logfile.good()) {
+            if (logi.eof() || !logi.good()) {
                 // 文件结束或读取错误，稍后重试
                 // std::cout << "End of file reached or read error. Retrying..." << std::endl;
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -147,7 +146,7 @@ void *block_formation_thread(void *arg) {
             }
             // control the delay.../////
 
-            
+
             std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read((char *)&size, sizeof(uint32_t));
             std::cout << "After read: tellg=" << logi.tellg() << ",size=" << size << ",good=" << logi.good() << ",fail=" << logi.fail() << std::endl;
