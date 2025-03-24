@@ -138,6 +138,8 @@ void *block_formation_thread(void *arg) {
             logi.read((char *)&size, sizeof(uint32_t));
             log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d",
                 logi.tellg(), size, logi.good(), logi.fail());
+            
+            
 
             char *entry_ptr = (char *)malloc(size);
             logi.read(entry_ptr, size);
@@ -145,6 +147,8 @@ void *block_formation_thread(void *arg) {
             curr_size += size;
             string serialized_transaction(entry_ptr, size);
             free(entry_ptr);
+
+            sys.exit(0);
 
             /* build dependency graph */
             log_debug(stderr, "[block_id = %d, trans_id = %d]: added transaction to block.", block_index, trans_index);
