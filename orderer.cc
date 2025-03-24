@@ -261,6 +261,7 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
         while (reader->Read(&endorsement)) {
             pthread_mutex_lock(&tq.mutex);
             tq.trans_queue.emplace(endorsement.SerializeAsString());
+            std::cout << "receive leader stream transactions" << std::endl;
             pthread_mutex_unlock(&tq.mutex);
         }
 
