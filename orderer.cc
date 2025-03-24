@@ -426,7 +426,7 @@ void run_follower(const std::string &server_address) {
     std::filesystem::create_directory("./consensus");
 
     //TODO why follower doesn't need to open the log file?
-    global_log_file.open("./consensus/raft.log", ios::in | ios::out | ios::binary);
+    global_log_file.open("./consensus/raft.log", ios::in | ios::out | ios::app | ios::binary);
     assert(global_log_file.is_open());
 
     /* start the grpc server for ConsensusComm */
