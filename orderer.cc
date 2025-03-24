@@ -134,10 +134,10 @@ void *block_formation_thread(void *arg) {
             last_applied++;
             /* put the entry in current block and generate dependency graph */
             uint32_t size;
-            log_info(stderr, "Before read: tellg=%lld", logi.tellg());
+            // log_info(stderr, "Before read: tellg=%lld", logi.tellg());
             logi.read((char *)&size, sizeof(uint32_t));
-            log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d",
-                logi.tellg(), size, logi.good(), logi.fail());
+            // log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d",
+                // logi.tellg(), size, logi.good(), logi.fail());
             
             
 
@@ -278,18 +278,6 @@ void run_leader(const std::string &server_address, std::string configfile) {
     ofstream logo("./consensus/raft.log", ios::out | ios::binary);
     assert(logo.is_open());
 
-    /* spawn replication threads and the block formation thread */
-    pthread_t *repl_tids;
-    repl_tids = (pthread_t *)malloc(sizeof(pthread_t) * follower_grpc_endpoints.size());
-    struct ThreadContext *ctxs = (struct ThreadContext *)calloc(follower_grpc_endpoints.size(), sizeof(struct ThreadContext));
-    for (int i = 0; i < follower_grpc_endpoints.size(); i++) {
-        next_index.emplace_back(1);
-        match_index.emplace_back(0);
-        ctxs[i].grpc_endpoint = follower_grpc_endpoints[i];
-        ctxs[i].server_index = i;
-        // pthread_create(&repl_tids[i], NULL, log_replication_thread, &ctxs[i]);
-        // pthread_detach(repl_tids[i]);
-    }
     pthread_t block_form_tid;
     pthread_create(&block_form_tid, NULL, block_formation_thread, &configfile);
     pthread_detach(block_form_tid);
@@ -309,8 +297,17 @@ void run_leader(const std::string &server_address, std::string configfile) {
         int i = 0;
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
             uint32_t size = tq.trans_queue.front().size();
+
+            log_info(stderr, "Before write: tellg=%lld", logo.tellg());
             logo.write((char *)&size, sizeof(uint32_t));
+            log_info(stderr, "After write: tellg=%lld, size=%d, good=%d, fail=%d",
+                logo.tellg(), size, logo.good(), logo.fail());
+
+            
             logo.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
+
+
+
             tq.trans_queue.pop();
         }
         logo.flush();
