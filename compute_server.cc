@@ -898,7 +898,7 @@ class ComputeCommImpl final : public ComputeComm::Service {
 
         while (reader->Read(&block)) {
             pthread_mutex_lock(&bq.mutex);
-            log_info(stderr,"received block %d in validator stream", block.block_id());
+            // log_info(stderr,"received block %d in validator stream", block.block_id());
             bq.bq_queue.push(block);
             pthread_mutex_unlock(&bq.mutex);
             sem_post(&bq.full);

@@ -136,7 +136,7 @@ void *block_formation_thread(void *arg) {
             uint32_t size;
             if(logi.tellg() == -1)
                 logi.clear();
-                
+
             std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read((char *)&size, sizeof(uint32_t));
             std::cout << "After read: tellg=" << logi.tellg() << std::endl;
@@ -266,7 +266,6 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
         while (reader->Read(&endorsement)) {
             pthread_mutex_lock(&tq.mutex);
             tq.trans_queue.emplace(endorsement.SerializeAsString());
-            std::cout << "receive leader stream transactions" << std::endl;
             pthread_mutex_unlock(&tq.mutex);
         }
 
