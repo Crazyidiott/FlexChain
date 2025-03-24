@@ -17,6 +17,7 @@ atomic<bool> end_flag = false;
 atomic<long> total_ops = 0;
 pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
 fstream global_log_file;
+atomic<long long> last_read_offset(0);
 
 bool has_rw_conflicts(int target_trans, int current_trans,
                       const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
@@ -146,18 +147,26 @@ void *block_formation_thread(void *arg) {
             // log.read(entry_ptr, size);
             
             pthread_mutex_lock(&file_mutex);
-            global_log_file.clear(); 
+            global_log_file.clear(); // 清空错误标志
+            global_log_file.seekg(last_read_offset, ios::beg); // last_read_offset 记录上次读到哪里
             log_info(stderr, "Before read: tellg=%lld", global_log_file.tellg());
             global_log_file.read((char *)&size, sizeof(uint32_t));
-            log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d", 
+            log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d",
                 global_log_file.tellg(), size, global_log_file.good(), global_log_file.fail());
+            last_read_offset = global_log_file.tellg(); // 更新读指针
             pthread_mutex_unlock(&file_mutex);
 
             char *entry_ptr = (char *)malloc(size);
 
             pthread_mutex_lock(&file_mutex);
             global_log_file.clear(); 
+            global_log_file.clear(); // 清空错误标志
+            global_log_file.seekg(last_read_offset, ios::beg); // last_read_offset 记录上次读到哪里
+            log_info(stderr, "Before read: tellg=%lld", global_log_file.tellg());
             global_log_file.read(entry_ptr, size);
+            log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d",
+                global_log_file.tellg(), size, global_log_file.good(), global_log_file.fail());
+            last_read_offset = global_log_file.tellg(); // 更新读指针
             pthread_mutex_unlock(&file_mutex);
 
             curr_size += size;
