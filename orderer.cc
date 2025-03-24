@@ -348,7 +348,7 @@ void run_leader(const std::string &server_address, std::string configfile) {
             tq.trans_queue.pop();
         }
         pthread_mutex_lock(&file_mutex);
-        global_log_file.flush
+        global_log_file.flush();
         pthread_mutex_unlock(&file_mutex);
         // log.flush();
         last_log_index += i;
