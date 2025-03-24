@@ -105,7 +105,7 @@ void batch_processing_thread() {
             
             if (logfile.eof() || !logfile.good()) {
                 // 文件结束或读取错误，稍后重试
-                
+                std::cout << "End of file reached or read error. Retrying...................................................................................................................." << std::endl;
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 continue;
             }
