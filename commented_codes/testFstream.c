@@ -75,11 +75,11 @@ void batch_processing_thread() {
     
     // 确保日志文件存在
     while (!ready_flag) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     
     // 等待一些日志数据生成
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    // std::this_thread::sleep_for(std::chrono::seconds(1));
     
     // 打开日志文件用于读取
     std::ifstream logfile("./log_data/transactions.log", std::ios::in | std::ios::binary);
@@ -106,7 +106,7 @@ void batch_processing_thread() {
             if (logfile.eof() || !logfile.good()) {
                 // 文件结束或读取错误，稍后重试
                 std::cout << "End of file reached or read error. Retrying...................................................................................................................." << std::endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                // std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 continue;
             }
             
@@ -140,7 +140,7 @@ void batch_processing_thread() {
             }
         } else {
             // 没有新的已提交日志条目，休眠一会儿
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            // std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         
         // 更新commit_index（在实际系统中这可能是基于一致性协议的）
@@ -172,7 +172,7 @@ void client_thread() {
     
     // 等待写入线程准备就绪
     while (!ready_flag) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     
     // 配置参数
@@ -185,6 +185,8 @@ void client_thread() {
     
     // 循环生成交易，直到收到结束信号
     while (!end_flag) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+
         // 在每个间隔内生成交易
         for (int i = 0; i < trans_per_interval; i++) {
             // 生成随机交易
@@ -197,7 +199,6 @@ void client_thread() {
         }
         
         // 等待下一个间隔
-        std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
     }
     
     std::cout << "Client thread has stopped." << std::endl;
