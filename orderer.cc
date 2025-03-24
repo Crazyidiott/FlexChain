@@ -92,7 +92,7 @@ void *block_formation_thread(void *arg) {
     }
 
     // ifstream log("./consensus/raft.log", ios::in | ios::binary);
-    assert(log.is_open());
+    // assert(log.is_open());
 
     unsigned long last_applied = 0;
     int majority = follower_grpc_endpoints.size() / 2;
