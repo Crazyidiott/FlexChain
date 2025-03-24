@@ -16,58 +16,7 @@ atomic<bool> ready_flag = false;
 atomic<bool> end_flag = false;
 atomic<long> total_ops = 0;
 pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-void *log_replication_thread(void *arg) {
-    struct ThreadContext ctx = *(struct ThreadContext *)arg;
-    log_info(stderr, "[server_index = %d]log replication thread is running for follower %s.", ctx.server_index, ctx.grpc_endpoint.c_str());
-    shared_ptr<grpc::Channel> channel = grpc::CreateChannel(ctx.grpc_endpoint, grpc::InsecureChannelCredentials());
-    unique_ptr<ConsensusComm::Stub> stub(ConsensusComm::NewStub(channel));
-
-    ifstream log("./consensus/raft.log", ios::in | ios::binary);
-    assert(log.is_open());
-
-    while (true) {
-        if (last_log_index >= next_index[ctx.server_index]) {
-            /* send AppendEntries RPC */
-            ClientContext context;
-            AppendRequest app_req;
-            AppendResponse app_rsp;
-
-            app_req.set_leader_commit(commit_index);
-            int index = 0;
-            for (; index < LOG_ENTRY_BATCH && next_index[ctx.server_index] + index <= last_log_index; index++) {
-                uint32_t size;
-                
-                pthread_mutex_lock(&file_mutex);
-                log_info(stderr, "Before read: tellg=%lld", log.tellg());
-                log.read((char *)&size, sizeof(uint32_t));
-                log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d", log.tellg(), size, log.good(), log.fail());
-                pthread_mutex_unlock(&file_mutex);
-
-                pthread_mutex_lock(&file_mutex);
-                char *entry_ptr = (char *)malloc(size);
-                log.read(entry_ptr, size);
-                pthread_mutex_unlock(&file_mutex);
-
-                app_req.add_log_entries(entry_ptr, size);
-                free(entry_ptr);
-            }
-
-            Status status = stub->append_entries(&context, app_req, &app_rsp);
-            if (!status.ok()) {
-                log_err("[server_index = %d]gRPC failed with error message: %s.", ctx.server_index, status.error_message().c_str());
-                continue;
-            } else {
-                log_debug(stderr, "[server_index = %d]send append_entries RPC. last_log_index = %ld. next_index = %ld. commit_index = %ld.",
-                          ctx.server_index, last_log_index.load(), next_index[ctx.server_index].load(), commit_index.load());
-            }
-
-            next_index[ctx.server_index] += index;
-            match_index[ctx.server_index] = next_index[ctx.server_index] - 1;
-            // log_debug(stderr, "[server_index = %d]match_index is %ld.", ctx.server_index, match_index[ctx.server_index].load());
-        }
-    }
-}
+fstream global_log_file;
 
 bool has_rw_conflicts(int target_trans, int current_trans,
                       const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
@@ -174,6 +123,7 @@ void *block_formation_thread(void *arg) {
         if (role == LEADER) {
             int N = commit_index + 1;
             int count = 0;
+            usleep(1000);
             for (int i = 0; i < match_index.size(); i++) {
                 if (match_index[i] >= N) {
                     count++;
@@ -191,16 +141,21 @@ void *block_formation_thread(void *arg) {
             /* put the entry in current block and generate dependency graph */
             uint32_t size;
 
+            // log.read((char *)&size, sizeof(uint32_t));
+            // char *entry_ptr = (char *)malloc(size);
+            // log.read(entry_ptr, size);
+            
             pthread_mutex_lock(&file_mutex);
-
-            log_info(stderr, "Before read: tellg=%lld", log.tellg());
-            log.read((char *)&size, sizeof(uint32_t));
-            log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d", log.tellg(), size, log.good(), log.fail());
+            log_info(stderr, "Before read: tellg=%lld", global_log_file.tellg());
+            global_log_file.read((char *)&size, sizeof(uint32_t));
+            log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d", 
+                global_log_file.tellg(), size, global_log_file.good(), global_log_file.fail());
             pthread_mutex_unlock(&file_mutex);
+
             char *entry_ptr = (char *)malloc(size);
 
             pthread_mutex_lock(&file_mutex);
-            log.read(entry_ptr, size);
+            global_log_file.read(entry_ptr, size);
             pthread_mutex_unlock(&file_mutex);
 
             curr_size += size;
@@ -285,15 +240,20 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
         int i = 0;
         for (; i < request->log_entries_size(); i++) {
             uint32_t size = request->log_entries(i).size();
+            // log.write((char *)&size, sizeof(uint32_t));
+            // log.write(request->log_entries(i).c_str(), size);
 
             pthread_mutex_lock(&file_mutex);
-            log.write((char *)&size, sizeof(uint32_t));
-            log.write(request->log_entries(i).c_str(), size);
+            global_log_file.write((char *)&size, sizeof(uint32_t));
+            global_log_file.write(request->log_entries(i).c_str(), size);
             pthread_mutex_unlock(&file_mutex);
 
             last_log_index++;
         }
-        log.flush();
+        // log.flush();
+        pthread_mutex_lock(&file_mutex);
+        global_log_file.flush();
+        pthread_mutex_unlock(&file_mutex);
 
         uint64_t leader_commit = request->leader_commit();
         if (leader_commit > commit_index) {
@@ -339,7 +299,9 @@ void run_leader(const std::string &server_address, std::string configfile) {
     std::filesystem::remove_all("./consensus");
     std::filesystem::create_directory("./consensus");
 
-    ofstream log("./consensus/raft.log", ios::out | ios::binary);
+    // ofstream log("./consensus/raft.log", ios::out | ios::binary);
+    global_log_file.open("./consensus/raft.log", ios::in | ios::out | ios::binary | ios::trunc);
+    assert(global_log_file.is_open());
 
     /* spawn replication threads and the block formation thread */
     pthread_t *repl_tids;
@@ -348,14 +310,14 @@ void run_leader(const std::string &server_address, std::string configfile) {
     //用于存储线程
     struct ThreadContext *ctxs = (struct ThreadContext *)calloc(follower_grpc_endpoints.size(), sizeof(struct ThreadContext));
 
-    for (int i = 0; i < follower_grpc_endpoints.size(); i++) {
-        next_index.emplace_back(1);
-        match_index.emplace_back(0);
-        ctxs[i].grpc_endpoint = follower_grpc_endpoints[i];
-        ctxs[i].server_index = i;
-        pthread_create(&repl_tids[i], NULL, log_replication_thread, &ctxs[i]);
-        pthread_detach(repl_tids[i]);
-    }
+    // for (int i = 0; i < follower_grpc_endpoints.size(); i++) {
+    //     next_index.emplace_back(1);
+    //     match_index.emplace_back(0);
+    //     ctxs[i].grpc_endpoint = follower_grpc_endpoints[i];
+    //     ctxs[i].server_index = i;
+    //     pthread_create(&repl_tids[i], NULL, log_replication_thread, &ctxs[i]);
+    //     pthread_detach(repl_tids[i]);
+    // }
 
     pthread_t block_form_tid;
     pthread_create(&block_form_tid, NULL, block_formation_thread, &configfile);
@@ -377,13 +339,12 @@ void run_leader(const std::string &server_address, std::string configfile) {
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
             uint32_t size = tq.trans_queue.front().size();
 
+            // log.write((char *)&size, sizeof(uint32_t));
+            // log.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
             pthread_mutex_lock(&file_mutex);
-            // log_info(stderr, "Before write: tellp=%lld", log.tellp());
-            log.write((char *)&size, sizeof(uint32_t));
-            // log_info(stderr, "After write: tellp=%lld, good=%d, fail=%d", log.tellp(), log.good(), log.fail());
-            log.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
+            global_log_file.write((char *)&size, sizeof(uint32_t));
+            global_log_file.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
             pthread_mutex_unlock(&file_mutex);
-
             tq.trans_queue.pop();
         }
         log.flush();
@@ -450,6 +411,10 @@ void run_follower(const std::string &server_address) {
     std::filesystem::remove_all("./consensus");
     std::filesystem::create_directory("./consensus");
 
+    //TODO why follower doesn't need to open the log file?
+    global_log_file.open("./consensus/raft.log", ios::in | ios::out | ios::binary | ios::trunc);
+    assert(global_log_file.is_open());
+
     /* start the grpc server for ConsensusComm */
     ConsensusCommImpl service;
     ServerBuilder builder;
@@ -512,14 +477,20 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        pthread_t client_id;
-        pthread_create(&client_id, NULL, run_client, NULL);
+        // pthread_t client_id;
+        // pthread_create(&client_id, NULL, run_client, NULL);
 
         run_leader(server_addr, configfile);
 
     } else if (role == FOLLOWER) {
         run_follower(server_addr);
     }
+
+    pthread_mutex_lock(&file_mutex);
+    if (global_log_file.is_open()) {
+        global_log_file.close();
+    }
+    pthread_mutex_unlock(&file_mutex);
 
     return 0;
 }

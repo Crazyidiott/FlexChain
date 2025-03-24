@@ -767,7 +767,7 @@ void *validation_handler(void *arg) {
         sem_wait(&bq.full);
         pthread_mutex_lock(&bq.mutex);
         Block block = bq.bq_queue.front();
-        log_info(stderr,"validator extracts block %d", block.block_id());
+        // log_info(stderr,"validator extracts block %d", block.block_id());
         bq.bq_queue.pop();
         pthread_mutex_unlock(&bq.mutex);
 
