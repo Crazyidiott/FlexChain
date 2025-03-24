@@ -111,14 +111,17 @@ void batch_processing_thread() {
             }
             
             // 读取交易数据
-            char* entry_ptr = new char[size + 1];
+            // char* entry_ptr = new char[size + 1];
+            char *entry_ptr = (char *)malloc(size);
+
             logfile.read(entry_ptr, size);
             entry_ptr[size] = '\0'; // 添加字符串结束符
             
             // 添加到批处理中
             std::string transaction(entry_ptr, size);
             batch.push_back(transaction);
-            delete[] entry_ptr;
+            free(entry_ptr);
+            // delete[] entry_ptr;
             
             // 当批处理达到最大大小时处理
             if (batch.size() >= MAX_BATCH_SIZE) {
