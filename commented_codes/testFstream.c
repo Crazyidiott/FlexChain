@@ -100,7 +100,9 @@ void batch_processing_thread() {
             // 读取交易大小
             uint32_t size;
             std::cout << "Before read: tellg=" << logfile.tellg() << std::endl;
-            logfile.read(reinterpret_cast<char*>(&size), sizeof(uint32_t));
+            // logfile.read(reinterpret_cast<char*>(&size), sizeof(uint32_t));
+            logfile.read((char *)&size, sizeof(uint32_t));
+
             std::cout << "After read: tellg=" << logfile.tellg() << ",size=" << size << ",good=" << logfile.good() << ",fail=" << logfile.fail() << std::endl;
             
             if (logfile.eof() || !logfile.good()) {
