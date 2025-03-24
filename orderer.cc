@@ -299,10 +299,10 @@ void run_leader(const std::string &server_address, std::string configfile) {
             uint32_t size = tq.trans_queue.front().size();
 
             // log_info(stderr, "Before write: tellp=%lld", logo.tellp());
-            std::cout << "Before read: tellP=" << logfile.tellp() << std::endl;  
+            std::cout << "Before read: tellP=" << logo.tellp() << std::endl;  
             logo.write((char *)&size, sizeof(uint32_t));
             // log_info(stderr, "After write: tellp=%lld, size=%d, good=%d, fail=%d",logo.tellp(), size, logo.good(), logo.fail());
-            std::cout << "After read: tellp=" << logfile.tellp() << ",size=" << size << ",good=" << logfile.good() << ",fail=" << logfile.fail() << std::endl;
+            std::cout << "After read: tellp=" << logo.tellp() << ",size=" << size << ",good=" << logo.good() << ",fail=" << logo.fail() << std::endl;
 
             
             logo.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
