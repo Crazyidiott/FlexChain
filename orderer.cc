@@ -134,9 +134,14 @@ void *block_formation_thread(void *arg) {
             last_applied++;
             /* put the entry in current block and generate dependency graph */
             uint32_t size;
+            log_info(stderr, "Before read: tellg=%lld", logi.tellg());
             logi.read((char *)&size, sizeof(uint32_t));
+            log_info(stderr, "After read: tellg=%lld, size=%d, good=%d, fail=%d",
+                logi.tellg(), size, logi.good(), logi.fail());
+
             char *entry_ptr = (char *)malloc(size);
             logi.read(entry_ptr, size);
+
             curr_size += size;
             string serialized_transaction(entry_ptr, size);
             free(entry_ptr);
@@ -430,8 +435,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // pthread_t client_id;
-        // pthread_create(&client_id, NULL, run_client, NULL);
+        pthread_t client_id;
+        pthread_create(&client_id, NULL, run_client, NULL);
 
         run_leader(server_addr, configfile);
     } else if (role == FOLLOWER) {
