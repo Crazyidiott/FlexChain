@@ -30,6 +30,7 @@ void write_log_thread() {
     std::cout << "Write log thread is running." << std::endl;
     
     // 确保目录存在
+    std::filesystem::remove_all("./log_data");
     std::filesystem::create_directory("./log_data");
     
     // 打开日志文件
@@ -98,10 +99,13 @@ void batch_processing_thread() {
             
             // 读取交易大小
             uint32_t size;
+            std::cout << "Before read: tellg=" << logfile.tellg() << std::endl;
             logfile.read(reinterpret_cast<char*>(&size), sizeof(uint32_t));
+            std::cout << "After read: tellg=" << logfile.tellg() << ",size=" << size << ",good=" << logfile.good() << ",fail=" << logfile.fail() << std::endl;
             
             if (logfile.eof() || !logfile.good()) {
                 // 文件结束或读取错误，稍后重试
+                
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 continue;
             }
