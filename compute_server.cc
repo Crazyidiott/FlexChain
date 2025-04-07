@@ -1029,6 +1029,7 @@ void run_server(const string &server_address, bool is_validator) {
     while (!prepopulation_completed)
         ;
 
+    //separate the client initialization
     start_client();
     uint64_t time = benchmark_throughput(is_validator);
 
@@ -1038,14 +1039,40 @@ void run_server(const string &server_address, bool is_validator) {
     //     pthread_join(tid[i], &status);
     // }
 
-    log_info(stderr, "throughput = %f /seconds.", ((float)total_ops.load() / time) * 1000);
-    log_info(stderr, "abort rate = %f.", ((float)abort_count.load() / ((float)total_ops.load() + (float)abort_count.load())) * 100);
-    log_info(stderr, "cache hit ratio = %f.", ((float)cache_hit.load() / (float)cache_total.load()) * 100);
-    log_info(stderr, "sstable ratio = %f.", ((float)sst_count.load() / (float)cache_total.load()) * 100);
+    // log_info(stderr, "throughput = %f /seconds.", ((float)total_ops.load() / time) * 1000);
+    // log_info(stderr, "abort rate = %f.", ((float)abort_count.load() / ((float)total_ops.load() + (float)abort_count.load())) * 100);
+    // log_info(stderr, "cache hit ratio = %f.", ((float)cache_hit.load() / (float)cache_total.load()) * 100);
+    // log_info(stderr, "sstable ratio = %f.", ((float)sst_count.load() / (float)cache_total.load()) * 100);
+
+    pthread_t stat_tid;
+    pthread_create(&stat_tid, NULL, statistics_thread, NULL);
+    //bind the statistic thread to cpu 0
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(0, &cpuset);
+    int ret = pthread_setaffinity_np(stat_tid, sizeof(cpu_set_t), &cpuset);
+    if (ret) {
+        log_err("pthread_setaffinity_np failed with '%s'.", strerror(ret));
+    }
+    pthread_detach(stat_tid);
 
     // pthread_join(validation_manager_tid, &status);
     pthread_join(bg_tid, &status);
     free(ctxs);
+}
+
+/** TODO:
+ *  only show the new values
+ * 1. divide by time
+ * 2. reset the value to zero
+*/
+void *statistics_thread(void *arg){
+    while(!end_flag){
+        sleep(10);
+        log_info(stderr, "total_ops = %ld, abort_count = %ld, cache_hit = %ld, cache_total = %ld, sst_count = %ld",
+                total_ops.load(), abort_count.load(), cache_hit.load(), cache_total.load(), sst_count.load());
+    }
+    return NULL;
 }
 
 /* return 0 on success, 1 on not found, -1 on error */
