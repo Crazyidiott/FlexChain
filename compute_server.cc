@@ -459,7 +459,7 @@ string s_kv_get(struct ThreadContext &ctx, KVStableClient &client, const string 
     return value;
 }
 
-int s_(const string &key, const string &value, Endorsement &endorsement) {
+int s_kv_put(const string &key, const string &value, Endorsement &endorsement) {
     WriteItem *write_item = endorsement.add_write_set();
     write_item->set_write_key(key);
     write_item->set_write_value(value);
