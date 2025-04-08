@@ -942,6 +942,20 @@ class ComputeCommImpl final : public ComputeComm::Service {
     }
 };
 
+/** TODO:
+ *  only show the new values
+ * 1. divide by time
+ * 2. reset the value to zero
+*/
+void *statistics_thread(void *arg){
+    while(!end_flag){
+        sleep(10);
+        log_info(stderr, "total_ops = %ld, abort_count = %ld, cache_hit = %ld, cache_total = %ld, sst_count = %ld",
+                total_ops.load(), abort_count.load(), cache_hit.load(), cache_total.load(), sst_count.load());
+    }
+    return NULL;
+}
+
 void run_server(const string &server_address, bool is_validator) {
     //TODO 这里tg是根目录吗？
     std::filesystem::remove_all("../mydata/testdb");
@@ -1061,19 +1075,7 @@ void run_server(const string &server_address, bool is_validator) {
     free(ctxs);
 }
 
-/** TODO:
- *  only show the new values
- * 1. divide by time
- * 2. reset the value to zero
-*/
-void *statistics_thread(void *arg){
-    while(!end_flag){
-        sleep(10);
-        log_info(stderr, "total_ops = %ld, abort_count = %ld, cache_hit = %ld, cache_total = %ld, sst_count = %ld",
-                total_ops.load(), abort_count.load(), cache_hit.load(), cache_total.load(), sst_count.load());
-    }
-    return NULL;
-}
+
 
 /* return 0 on success, 1 on not found, -1 on error */
 int KVStableClient::read_sstables(const string &key, string &value) {

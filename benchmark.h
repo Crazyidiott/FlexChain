@@ -67,5 +67,6 @@ int zipf(double alpha, int n);
 double rand_val(int seed);
 void kmeans(vector<int> &A, int K);
 string get_balance_str(uint64_t balance, size_t length);
+void start_client();
 
 #endif
