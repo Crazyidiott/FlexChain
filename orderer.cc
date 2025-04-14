@@ -394,7 +394,8 @@ void *run_client(void *arg) {
     // pthread_join(client_tid, &status);
 
     while (total_ops == 0)
-        ;
+        log_info(stderr,"stuck in no total_ops");
+        
 
     log_info(stderr, "*******************************benchmarking completed*******************************");
     uint64_t time = (after - before).count();
