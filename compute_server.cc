@@ -949,7 +949,7 @@ class ComputeCommImpl final : public ComputeComm::Service {
 */
 void *statistics_thread(void *arg){
     while(!end_flag){
-        sleep(10);
+        sleep(5);
         log_info(stderr, "total_ops = %ld, abort_count = %ld, cache_hit = %ld, cache_total = %ld, sst_count = %ld",
                 total_ops.load(), abort_count.load(), cache_hit.load(), cache_total.load(), sst_count.load());
     }
@@ -1057,9 +1057,13 @@ void run_server(const string &server_address, bool is_validator) {
     // log_info(stderr, "abort rate = %f.", ((float)abort_count.load() / ((float)total_ops.load() + (float)abort_count.load())) * 100);
     // log_info(stderr, "cache hit ratio = %f.", ((float)cache_hit.load() / (float)cache_total.load()) * 100);
     // log_info(stderr, "sstable ratio = %f.", ((float)sst_count.load() / (float)cache_total.load()) * 100);
+    log_info(stderr, "before stat");
 
     pthread_t stat_tid;
     pthread_create(&stat_tid, NULL, statistics_thread, NULL);
+
+    log_info(stderr, "after create stat");
+
     //bind the statistic thread to cpu 0
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
@@ -1068,10 +1072,17 @@ void run_server(const string &server_address, bool is_validator) {
     if (ret) {
         log_err("pthread_setaffinity_np failed with '%s'.", strerror(ret));
     }
+    log_info(stderr, "before detach stat");
     pthread_detach(stat_tid);
+    log_info(stderr, "after detach stat");
+
+
 
     // pthread_join(validation_manager_tid, &status);
     pthread_join(bg_tid, &status);
+
+    log_info(stderr, "after join bg_tid...");
+
     free(ctxs);
 }
 
