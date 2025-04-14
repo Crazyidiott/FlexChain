@@ -475,7 +475,7 @@ int64_t benchmark_throughput(bool is_validator) {
         sleep(30);
     }
     
-    end_flag = 1;
+    // end_flag = 1;
     after = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
 
     void *status;
