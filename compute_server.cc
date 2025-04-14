@@ -951,7 +951,7 @@ void *statistics_thread(void *arg){
     // log_info(stderr,"get into statistics thread");
     while(!end_flag){
         // log_info(stderr,"get into statistics thread's whileeee");
-        sleep(1);
+        sleep(5);
         log_info(stderr, "total_ops = %ld, abort_count = %ld, cache_hit = %ld, cache_total = %ld, sst_count = %ld",
                 total_ops.load(), abort_count.load(), cache_hit.load(), cache_total.load(), sst_count.load());
     }
