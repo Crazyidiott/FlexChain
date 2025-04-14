@@ -292,7 +292,7 @@ void *client_thread(void *arg) {
     // log_info(stderr,"Get into client thread.");
 
     while (!end_flag) {
-        log_info(stderr, "get into client thread's while");
+        // log_info(stderr, "get into client thread's while");
         usleep(interval);
 
         for (int i = 0; i < trans_per_interval; i++) {
@@ -357,7 +357,7 @@ void *client_thread(void *arg) {
             // pthread_mutex_unlock(&rq.mutex);
             // sem_post(&rq.full);
         }
-        log_info(stderr, "client thread finished one interval.");
+        // log_info(stderr, "client thread finished one interval.");
     }
     // log_info(stderr, "client thread exiting.");
     return NULL;
