@@ -289,6 +289,7 @@ void *client_thread(void *arg) {
     bernoulli_distribution kmeans_pw_distribution(0.95);
     uniform_int_distribution<int> trans_distribution(0, 4);
     rand_val(1);
+    log_info(stderr,"Get into client thread.");
 
     while (!end_flag) {
         usleep(interval);
@@ -356,6 +357,7 @@ void *client_thread(void *arg) {
             // sem_post(&rq.full);
         }
     }
+    log_info(stderr, "client thread exiting.");
     return NULL;
 }
 
@@ -448,6 +450,7 @@ void start_client() {
     pthread_t client_tid;
     pthread_create(&client_tid, NULL, client_thread, NULL);
     pthread_detach(client_tid);
+    log_info(stderr,"detach clinet tid");
 }
 
 //separate client initialization and throughput test
