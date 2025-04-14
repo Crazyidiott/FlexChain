@@ -948,9 +948,9 @@ class ComputeCommImpl final : public ComputeComm::Service {
  * 2. reset the value to zero
 */
 void *statistics_thread(void *arg){
-    log_info(stderr,"get into statistics thread");
+    // log_info(stderr,"get into statistics thread");
     while(!end_flag){
-        log_info(stderr,"get into statistics thread's whileeee");
+        // log_info(stderr,"get into statistics thread's whileeee");
         sleep(1);
         log_info(stderr, "total_ops = %ld, abort_count = %ld, cache_hit = %ld, cache_total = %ld, sst_count = %ld",
                 total_ops.load(), abort_count.load(), cache_hit.load(), cache_total.load(), sst_count.load());
@@ -1060,7 +1060,7 @@ void run_server(const string &server_address, bool is_validator) {
         log_err("pthread_setaffinity_np failed with '%s'.", strerror(ret));
     }
     pthread_detach(stat_tid);
-    log_info(stderr, "after detach stat");
+    // log_info(stderr, "after detach stat");
 
     uint64_t time = benchmark_throughput(is_validator);
 

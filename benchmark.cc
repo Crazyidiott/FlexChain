@@ -289,7 +289,7 @@ void *client_thread(void *arg) {
     bernoulli_distribution kmeans_pw_distribution(0.95);
     uniform_int_distribution<int> trans_distribution(0, 4);
     rand_val(1);
-    log_info(stderr,"Get into client thread.");
+    // log_info(stderr,"Get into client thread.");
 
     while (!end_flag) {
         log_info(stderr, "get into client thread's while");
@@ -359,7 +359,7 @@ void *client_thread(void *arg) {
         }
         log_info(stderr, "client thread finished one interval.");
     }
-    log_info(stderr, "client thread exiting.");
+    // log_info(stderr, "client thread exiting.");
     return NULL;
 }
 
