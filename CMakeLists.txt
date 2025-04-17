@@ -22,7 +22,7 @@ add_library(utils OBJECT utils.cc)
 add_library(statistics OBJECT statistics.cc)
 
 
-add_executable(compute_server compute_server.cc $<TARGET_OBJECTS:benchmark> $<TARGET_OBJECTS:setup_ib> $<TARGET_OBJECTS:utils>)
+add_executable(compute_server compute_server.cc $<TARGET_OBJECTS:benchmark> $<TARGET_OBJECTS:setup_ib> $<TARGET_OBJECTS:utils> $<TARGET_OBJECTS:statistics>)
 add_executable(memory_server memory_server.cc $<TARGET_OBJECTS:setup_ib> $<TARGET_OBJECTS:utils>)
 add_executable(storage_server storage_server.cc)
 add_executable(orderer orderer.cc $<TARGET_OBJECTS:utils>)
