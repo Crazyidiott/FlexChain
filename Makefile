@@ -15,7 +15,7 @@ PROTOS_PATH = .
 
 all: compute_server memory_server storage_server orderer
 
-compute_server: compute_server.cc benchmark.o setup_ib.o utils.o storage.pb.o storage.grpc.pb.o blockchain.pb.o blockchain.grpc.pb.o
+compute_server: compute_server.cc statistics.o benchmark.o setup_ib.o utils.o storage.pb.o storage.grpc.pb.o blockchain.pb.o blockchain.grpc.pb.o
 	$(CXX) $(CPPFLAGS) -I../leveldb/include $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
 memory_server: memory_server.cc setup_ib.o utils.o storage.pb.o storage.grpc.pb.o

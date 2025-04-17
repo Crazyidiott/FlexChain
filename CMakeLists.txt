@@ -19,6 +19,8 @@ INCLUDE_DIRECTORIES(${Protobuf_INCLUDE_DIRS})
 add_library(benchmark OBJECT benchmark.cc)
 add_library(setup_ib OBJECT setup_ib.cc)
 add_library(utils OBJECT utils.cc)
+add_library(statistics OBJECT statistics.cc)
+
 
 add_executable(compute_server compute_server.cc $<TARGET_OBJECTS:benchmark> $<TARGET_OBJECTS:setup_ib> $<TARGET_OBJECTS:utils>)
 add_executable(memory_server memory_server.cc $<TARGET_OBJECTS:setup_ib> $<TARGET_OBJECTS:utils>)
