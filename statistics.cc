@@ -6,7 +6,7 @@ extern std::atomic<long> cache_hit;
 extern std::atomic<long> cache_total;
 extern std::atomic<long> sst_count;
 extern volatile int end_flag;
-static pthread_t stats_thread;
+pthread_t stats_thread;
 
 typedef struct {
     unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
@@ -64,7 +64,7 @@ static double get_memory_usage_percent() {
     return (double)used / mem_total * 100.0;
 }
 
-static void *statistics_thread(void *arg) {
+void *statistics_thread(void *arg) {
     long last_ops = total_ops.load();
     long last_cache_hit = cache_hit.load();
 
