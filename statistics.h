@@ -3,11 +3,12 @@
 
 #include <atomic>
 #include <pthread.h>
-#include <log.h>
 #include <atomic>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "log.h"
+
 void start_statistics_thread();
 void stop_statistics_thread();
 
