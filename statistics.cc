@@ -159,8 +159,9 @@ void *statistics_thread(void *arg) {
                 current_ops, abort_count.load(), current_cache_hit, cache_total.load(), sst_count.load(),
                 ops_diff, cache_hit_diff);
 
+    }
     return NULL;
-}
+
 }
 
 void start_statistics_thread() {
