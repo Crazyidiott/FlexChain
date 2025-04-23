@@ -188,6 +188,8 @@ void bind_thread_to_cpu(int cpu_id) {
     }
 }
 
+// 计算区间指标
+
 void *statistics_thread_avg(void *arg) {
     long last_ops = total_ops.load();
     long last_cache_hit = cache_hit.load();
@@ -226,6 +228,7 @@ void *statistics_thread_avg(void *arg) {
     }
     return NULL;
 }
+
 // //old version
 // void *statistics_thread(void *arg){
 //     // log_info(stderr,"get into statistics thread");
