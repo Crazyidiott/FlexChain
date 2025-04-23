@@ -988,6 +988,7 @@ void run_server(const string &server_address, bool is_validator) {
     //     }
     // }
 
+    //=========================start worker threads=============================
     int num_threads = c_config_info.num_qps_per_server;
     int num_sim_threads = c_config_info.num_sim_threads;
     pthread_t tid[num_threads];
@@ -1017,7 +1018,10 @@ void run_server(const string &server_address, bool is_validator) {
             log_err("pthread_setaffinity_np failed with '%s'.", strerror(ret));
         }
     }
+    //========================================================================
 
+
+    //===================initialize data and start client=====================
     /* microbenchmark logics */
     // test_get_only();
     prepopulate();
@@ -1032,6 +1036,8 @@ void run_server(const string &server_address, bool is_validator) {
 
     //separate the client initialization
     start_client();
+    //=======================================================================
+
 
     //=========================statistics thread=============================
     pthread_t stat_tid;
@@ -1046,6 +1052,10 @@ void run_server(const string &server_address, bool is_validator) {
     }
     pthread_detach(stat_tid);
     //=======================================================================
+
+    //=================threads number adjustment=============================
+    //=======================================================================
+    
 
     /* output stats */
     void *status;
