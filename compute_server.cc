@@ -493,7 +493,7 @@ void *simulation_handler(void *arg) {
 
     char *buf = (char *)malloc(c_config_info.data_msg_size);
     long local_ops = 0;
-    while (!end_flag) {
+    while (!ctx.end_flag) {
         sem_wait(&rq.full);
         pthread_mutex_lock(&rq.mutex);
         struct Request proposal;
@@ -764,7 +764,7 @@ void *validation_handler(void *arg) {
         compute_clients.emplace_back(compute_channel_ptrs[i]);
     }
 
-    while (!end_flag) {
+    while (!ctx.end_flag) {
         sem_wait(&bq.full);
         pthread_mutex_lock(&bq.mutex);
         Block block = bq.bq_queue.front();
