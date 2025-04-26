@@ -255,13 +255,13 @@ public:
         // Stop all simulation threads for this core
         for (pthread_t tid : sim_threads_by_core[core_id]) {
             int ctx_index = find_context_index(tid);
-            stop_thread(tid, ctx_index);
+            stop_thread(tid);
         }
         
         // Stop all validation threads for this core
         for (pthread_t tid : val_threads_by_core[core_id]) {
             int ctx_index = find_context_index(tid);
-            stop_thread(tid, ctx_index);
+            stop_thread(tid);
         }
         
         // Remove the core from active cores
@@ -317,7 +317,7 @@ public:
                     sim_threads_by_core[core_id].pop_back();
                     
                     int ctx_index = find_context_index(tid);
-                    stop_thread(tid, ctx_index);
+                    stop_thread(tid);
                 }
             }
             
@@ -342,7 +342,7 @@ public:
                     val_threads_by_core[core_id].pop_back();
                     
                     int ctx_index = find_context_index(tid);
-                    stop_thread(tid, ctx_index);
+                    stop_thread(tid);
                 }
             }
         }

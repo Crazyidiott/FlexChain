@@ -1050,6 +1050,8 @@ class CoreManager {
                 thread_contexts[i].thread_index = i;
                 thread_contexts[i].m_qp = c_ib_info.qp[i];
                 thread_contexts[i].m_cq = c_ib_info.cq[i];
+                assert(thread_contexts[i].m_qp != NULL);
+                assert(thread_contexts[i].m_cq != NULL);
             }
         }
         
