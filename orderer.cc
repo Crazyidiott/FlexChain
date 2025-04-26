@@ -1,6 +1,7 @@
 #include "orderer.h"
 #include "log.h"
 #include "utils.h"
+#include <sys/stat.h>
 
 atomic<unsigned long> commit_index(0);
 atomic<unsigned long> last_log_index(0);
@@ -85,7 +86,7 @@ void *block_formation_thread(void *arg) {
         // log_info(stderr, "block formation thread: channel for validator is in ready state.");
         stub = ComputeComm::NewStub(channel);
     }
-
+    std::string log_file_path = "./consensus/raft.log";
     ifstream logi("./consensus/raft.log", ios::in);
     assert(logi.is_open());
 
