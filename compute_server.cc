@@ -1150,7 +1150,8 @@ class CoreManager {
             
             // Add the core to active cores
             active_cores.push_back(core_id);
-            
+            log_info(stderr, "Adding core %d with %d simulation threads and %d validation threads.\n", 
+                     core_id, sim_threads_per_core, val_threads_per_core);
             // Create simulation threads
             std::vector<pthread_t> sim_tids;
             for (int i = 0; i < sim_threads_per_core; i++) {
