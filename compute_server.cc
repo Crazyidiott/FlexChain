@@ -1050,7 +1050,7 @@ class CoreManager {
                 thread_contexts[i].thread_index = i;
                 thread_contexts[i].m_qp = c_ib_info.qp[i];
                 thread_contexts[i].m_cq = c_ib_info.cq[i];
-                log_info(stderr, "thread_context[%d]: m_qp = %p, m_cq = %p", i, thread_contexts[i].m_qp, thread_contexts[i].m_cq);
+                // log_info(stderr, "thread_context[%d]: m_qp = %p, m_cq = %p", i, thread_contexts[i].m_qp, thread_contexts[i].m_cq);
                 assert(thread_contexts[i].m_qp != NULL);
                 assert(thread_contexts[i].m_cq != NULL);
             }
@@ -1345,7 +1345,7 @@ void run_server(const string &server_address, bool is_validator) {
     int num_threads = c_config_info.num_qps_per_server;
     int num_sim_threads = c_config_info.num_sim_threads;
     //TODO: HARD CODED
-    CoreManager core_manager(15, 1, num_threads);
+    CoreManager core_manager(1, 1, num_threads);
     std::vector<int> specific_cores = {0, 1, 2, 3, 4, 5, 6, 7}; 
     core_manager.initialize(8, specific_cores);
     // #region original initialization code
