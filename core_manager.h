@@ -123,7 +123,52 @@ public:
             remove_core(core_id);
         }
     }
+
+    // 初始化特定数量的核心
+    void initialize(int num_cores, const std::vector<int>& core_ids = {}) {
+        // 如果没有提供特定核心ID，则使用0到num_cores-1
+        std::vector<int> cores_to_add;
+        if (core_ids.empty()) {
+            for (int i = 0; i < num_cores; i++) {
+                cores_to_add.push_back(i);
+            }
+        } else {
+            // 使用提供的核心IDs
+            cores_to_add = core_ids;
+            if (cores_to_add.size() != num_cores) {
+                std::cerr << "Warning: core_ids size doesn't match num_cores" << std::endl;
+            }
+        }
+        
+        // 添加每个核心
+        for (int core_id : cores_to_add) {
+            if (add_core(core_id) != 0) {
+                std::cerr << "Failed to add core " << core_id << std::endl;
+            }
+        }
+    }
     
+    // 初始化具有特定线程配置的核心
+    void initialize_with_config(int num_cores, 
+                               int sim_threads, 
+                               int val_threads, 
+                               const std::vector<int>& core_ids = {}) {
+        // 临时保存原配置
+        int original_sim = sim_threads_per_core;
+        int original_val = val_threads_per_core;
+        
+        // 设置新配置
+        sim_threads_per_core = sim_threads;
+        val_threads_per_core = val_threads;
+        
+        // 初始化核心
+        initialize(num_cores, core_ids);
+        
+        // 恢复原配置（如果有必要的话）
+        sim_threads_per_core = original_sim;
+        val_threads_per_core = original_val;
+    }
+
     // Get current number of cores
     int get_core_count() {
         std::lock_guard<std::mutex> lock(core_mutex);
@@ -308,4 +353,5 @@ public:
         
         return 0; // Success
     }
+
 };

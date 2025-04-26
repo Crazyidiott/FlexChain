@@ -10,6 +10,7 @@
 #include "setup_ib.h"
 #include "utils.h"
 #include "statistics.h"
+#include "core_manager.h"
 
 struct CConfigInfo c_config_info;
 struct ComputeIBInfo c_ib_info;
@@ -991,33 +992,39 @@ void run_server(const string &server_address, bool is_validator) {
     //=========================start worker threads=============================
     int num_threads = c_config_info.num_qps_per_server;
     int num_sim_threads = c_config_info.num_sim_threads;
-    pthread_t tid[num_threads];
-    struct ThreadContext *ctxs = (struct ThreadContext *)calloc(num_threads, sizeof(struct ThreadContext));
-    for (int i = 0; i < num_threads; i++) {
-        assert(c_ib_info.cq[i] != NULL);
-        assert(c_ib_info.qp[i] != NULL);
-        ctxs[i].thread_index = i;
-        ctxs[i].m_qp = c_ib_info.qp[i];
-        ctxs[i].m_cq = c_ib_info.cq[i];
-        if (i < num_sim_threads) {
-            pthread_create(&tid[i], NULL, simulation_handler, &ctxs[i]);
-        } else {
-            // pthread_create(&tid[i], NULL, parallel_validation_worker, &ctxs[i]);
-            pthread_create(&tid[i], NULL, validation_handler, &ctxs[i]);
-            log_info(stderr, "validation thread created.");
+    //TODO: HARD CODED
+    CoreManager core_manager(15, 1, 1024);
+    std::vector<int> specific_cores = {0, 1, 2, 3, 4, 5, 6, 7}; 
+    core_manager.initialize(8, specific_cores);
+    // #region original initialization code
+    // pthread_t tid[num_threads];
+    // struct ThreadContext *ctxs = (struct ThreadContext *)calloc(num_threads, sizeof(struct ThreadContext));
+    // for (int i = 0; i < num_threads; i++) {
+    //     assert(c_ib_info.cq[i] != NULL);
+    //     assert(c_ib_info.qp[i] != NULL);
+    //     ctxs[i].thread_index = i;
+    //     ctxs[i].m_qp = c_ib_info.qp[i];
+    //     ctxs[i].m_cq = c_ib_info.cq[i];
+    //     if (i < num_sim_threads) {
+    //         pthread_create(&tid[i], NULL, simulation_handler, &ctxs[i]);
+    //     } else {
+    //         // pthread_create(&tid[i], NULL, parallel_validation_worker, &ctxs[i]);
+    //         pthread_create(&tid[i], NULL, validation_handler, &ctxs[i]);
+    //         log_info(stderr, "validation thread created.");
+    //     }
+    //     /* stick thread to a core for better performance */
+    //     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+    //     int core_id = i % num_cores;
+    //     cpu_set_t cpuset;
+    //     CPU_ZERO(&cpuset);
+    //     CPU_SET(core_id, &cpuset);
+    //     int ret = pthread_setaffinity_np(tid[i], sizeof(cpu_set_t), &cpuset);
+    //     if (ret) {
+    //         log_err("pthread_setaffinity_np failed with '%s'.", strerror(ret));
+    //     }
+    // }
+    //#endregion
 
-        }
-        /* stick thread to a core for better performance */
-        int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-        int core_id = i % num_cores;
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET(core_id, &cpuset);
-        int ret = pthread_setaffinity_np(tid[i], sizeof(cpu_set_t), &cpuset);
-        if (ret) {
-            log_err("pthread_setaffinity_np failed with '%s'.", strerror(ret));
-        }
-    }
     //========================================================================
 
 
