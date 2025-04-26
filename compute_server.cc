@@ -1073,7 +1073,7 @@ void run_server(const string &server_address, bool is_validator) {
     // pthread_join(validation_manager_tid, &status);
     pthread_join(bg_tid, &status);
 
-    free(ctxs);
+    // free(ctxs);
 }
 
 
