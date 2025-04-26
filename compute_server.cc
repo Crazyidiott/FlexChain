@@ -1345,7 +1345,7 @@ void run_server(const string &server_address, bool is_validator) {
     int num_threads = c_config_info.num_qps_per_server;
     int num_sim_threads = c_config_info.num_sim_threads;
     //TODO: HARD CODED
-    CoreManager core_manager(15, 1, 1024);
+    CoreManager core_manager(15, 1, num_threads);
     std::vector<int> specific_cores = {0, 1, 2, 3, 4, 5, 6, 7}; 
     core_manager.initialize(8, specific_cores);
     // #region original initialization code
