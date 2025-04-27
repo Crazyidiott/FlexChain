@@ -1210,6 +1210,7 @@ class CoreManager {
             for (pthread_t tid : val_threads_by_core[core_id]) {
                 int ctx_index = thread_to_context_index[tid];
                 stop_thread(tid);
+                log_info(stderr, "Stopping validation thread %lu\n", tid);
             }
             
             // Remove the core from active cores
@@ -1432,7 +1433,7 @@ void run_server(const string &server_address, bool is_validator) {
     //=================threads number adjustment=============================
     sleep(10);
     core_manager.add_core(8);
-    // core_manager.adjust_thread(1, 0);
+    core_manager.adjust_thread(1, 0);
     sleep(10);
     core_manager.remove_core(8);
     //=======================================================================

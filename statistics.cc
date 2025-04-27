@@ -149,7 +149,7 @@ void *statistics_thread(void *arg) {
     
         for (int i = 0; i < cpu_count; i++) {
             double usage = compute_cpu_usage(&prev_stats[i], &curr_stats[i]);
-            printf("CPU Core %d Usage: %.2f%%\n", i, usage);
+            // printf("CPU Core %d Usage: %.2f%%\n", i, usage);
             prev_stats[i] = curr_stats[i];
         }        
 
