@@ -1203,10 +1203,11 @@ class CoreManager {
             log_info(stderr, "Removing core %d\n", core_id);
             
             // Stop all simulation threads for this core
+            log_info(stderr, sim_threads_by_core[core_id].size());
             for (pthread_t tid : sim_threads_by_core[core_id]) {
+                log_info(stderr, "Stopping simulation thread %lu\n", tid);
                 int ctx_index = thread_to_context_index[tid];
                 stop_thread(tid);
-                log_info(stderr, "Stopping simulation thread %lu\n", tid);
             }
 
             
@@ -1440,7 +1441,6 @@ void run_server(const string &server_address, bool is_validator) {
     core_manager.add_core(8);
     // core_manager.adjust_thread(1, 0);
     sleep(10);
-    log_info(stderr, "test place 5");
     core_manager.remove_core(8);
     //=======================================================================
     
