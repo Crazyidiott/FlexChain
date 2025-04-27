@@ -564,7 +564,7 @@ void *simulation_handler(void *arg) {
                 string value(ver, 2 * sizeof(uint64_t));
                 value += proposal.value;
 
-                int ret = kv_put(ctx, compute_clients, proposal.key, value);
+                int ret = kv_put(*ctx, compute_clients, proposal.key, value);
                 // leveldb::Status s = db->Put(leveldb::WriteOptions(), proposal.key, value);
                 // int ret = 0;
                 // if (!s.ok()) {
@@ -592,7 +592,7 @@ void *simulation_handler(void *arg) {
             for (int i = 0; i < num_keys_per_trans; i++) {
                 int random_number = distribution(generator);
                 string key = "key_k_" + to_string(random_number);
-                string value = s_kv_get(ctx, storage_client, key, endorsement);
+                string value = s_kv_get(*ctx, storage_client, key, endorsement);
                 uint64_t data;
                 memcpy(&data, value.c_str(), sizeof(uint64_t));
                 A.push_back(data);
@@ -601,7 +601,7 @@ void *simulation_handler(void *arg) {
         } else if (proposal.type == Request::Type::TransactSavings) {
             int user_id = distribution(generator);
             string key = "saving_" + to_string(user_id);
-            string value = s_kv_get(ctx, storage_client, key, endorsement);
+            string value = s_kv_get(*ctx, storage_client, key, endorsement);
             uint64_t balance;
             memcpy(&balance, value.c_str(), sizeof(uint64_t));
             balance += 1000;
@@ -611,7 +611,7 @@ void *simulation_handler(void *arg) {
         } else if (proposal.type == Request::Type::DepositChecking) {
             int user_id = distribution(generator);
             string key = "checking_" + to_string(user_id);
-            string value = s_kv_get(ctx, storage_client, key, endorsement);
+            string value = s_kv_get(*ctx, storage_client, key, endorsement);
             uint64_t balance;
             memcpy(&balance, value.c_str(), sizeof(uint64_t));
             balance += 1000;
@@ -624,8 +624,8 @@ void *simulation_handler(void *arg) {
             string sender_key = "checking_" + to_string(sender_id);
             string receiver_key = "checking_" + to_string(receiver_id);
 
-            string sender_value = s_kv_get(ctx, storage_client, sender_key, endorsement);
-            string receiver_value = s_kv_get(ctx, storage_client, receiver_key, endorsement);
+            string sender_value = s_kv_get(*ctx, storage_client, sender_key, endorsement);
+            string receiver_value = s_kv_get(*ctx, storage_client, receiver_key, endorsement);
             uint64_t sender_balance, receiver_balance;
             memcpy(&sender_balance, sender_value.c_str(), sizeof(uint64_t));
             memcpy(&receiver_balance, receiver_value.c_str(), sizeof(uint64_t));
@@ -689,7 +689,7 @@ void *simulation_handler(void *arg) {
 
         // total_ops++;
         if (ctx->end_flag) {
-            log_info(stderr, "thread_index = %d: end_flag is %d", ctx.thread_index,ctx.end_flag);   
+            log_info(stderr, "thread_index = %d: end_flag is %d", ctx->thread_index,ctx->end_flag);   
         }
     }
     free(buf);
