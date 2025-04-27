@@ -335,7 +335,6 @@ class CoreManager {
             int new_sim_count = sim_threads_per_core + d_sim;
             int new_val_count = val_threads_per_core + d_val;
 
-            log_info(stderr, "test place 1");
 
             
             // Ensure at least one thread of each type
@@ -353,7 +352,6 @@ class CoreManager {
                 return -2;
             }
 
-            log_info(stderr, "test place 2");
 
             
             // Process each core
@@ -365,11 +363,9 @@ class CoreManager {
                     int sim_to_add = new_sim_count - current_sim_count;
                     
                     for (int i = 0; i < sim_to_add; i++) {
-                        log_info(stderr, "test place 3");
 
                         pthread_t tid = create_thread(core_id, true, 
                                                      current_sim_count + i);
-                        log_info(stderr, "test place 4");
                         sim_threads_by_core[core_id].push_back(tid);
                     }
                 } else if (d_sim < 0) {
@@ -428,7 +424,10 @@ int main() {
     CoreManager core_manager(1, 0, 16);
     
     // Initialize 4 cores
-    core_manager.initialize(1,{0});
+    core_manager.initialize(1,{0,1});
+
+    core_manager.adjust_thread(1, 0);
+
     
     // Adjust thread counts
     // core_manager.adjust_thread(1, -1); // Add 1 simulation thread and remove 1 validation thread
