@@ -1206,9 +1206,9 @@ class CoreManager {
             for (pthread_t tid : sim_threads_by_core[core_id]) {
                 int ctx_index = thread_to_context_index[tid];
                 stop_thread(tid);
+                log_info(stderr, "Stopping simulation thread %lu\n", tid);
             }
 
-            log_info(stderr, "Stopping simulation thread %lu\n", tid);
             
             // Stop all validation threads for this core
             for (pthread_t tid : val_threads_by_core[core_id]) {
@@ -1217,7 +1217,6 @@ class CoreManager {
                 log_info(stderr, "Stopping validation thread %lu\n", tid);
             }
 
-            log_info(stderr, "Stopping validation thread %lu\n", tid);
             
             // Remove the core from active cores
             active_cores.erase(it);
