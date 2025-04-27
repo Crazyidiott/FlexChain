@@ -1199,12 +1199,16 @@ class CoreManager {
                 std::cerr << "Core " << core_id << " is not active!" << std::endl;
                 return -2;
             }
+
+            log_info(stderr, "Removing core %d\n", core_id);
             
             // Stop all simulation threads for this core
             for (pthread_t tid : sim_threads_by_core[core_id]) {
                 int ctx_index = thread_to_context_index[tid];
                 stop_thread(tid);
             }
+
+            log_info(stderr, "Stopping simulation thread %lu\n", tid);
             
             // Stop all validation threads for this core
             for (pthread_t tid : val_threads_by_core[core_id]) {
@@ -1212,6 +1216,8 @@ class CoreManager {
                 stop_thread(tid);
                 log_info(stderr, "Stopping validation thread %lu\n", tid);
             }
+
+            log_info(stderr, "Stopping validation thread %lu\n", tid);
             
             // Remove the core from active cores
             active_cores.erase(it);
@@ -1435,6 +1441,7 @@ void run_server(const string &server_address, bool is_validator) {
     core_manager.add_core(8);
     // core_manager.adjust_thread(1, 0);
     sleep(10);
+    log_info(stderr, "test place 5");
     core_manager.remove_core(8);
     //=======================================================================
     
