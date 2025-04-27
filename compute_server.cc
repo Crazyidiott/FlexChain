@@ -1203,7 +1203,7 @@ class CoreManager {
             log_info(stderr, "Removing core %d\n", core_id);
             
             // Stop all simulation threads for this core
-            log_info(stderr, sim_threads_by_core[core_id].size());
+            log_info(stderr, "%d",sim_threads_by_core[core_id].size());
             for (pthread_t tid : sim_threads_by_core[core_id]) {
                 log_info(stderr, "Stopping simulation thread %lu\n", tid);
                 int ctx_index = thread_to_context_index[tid];
