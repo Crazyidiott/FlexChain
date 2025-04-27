@@ -522,7 +522,7 @@ void *simulation_handler(void *arg) {
             //           ctx.thread_index, proposal.key.c_str(), value.c_str(), value.size());
             // local_ops++;
 
-            s_kv_get(ctx, storage_client, proposal.key, endorsement);
+            s_kv_get(*ctx, storage_client, proposal.key, endorsement);
         } else if (proposal.type == Request::Type::PUT) {
             // int ret = kv_put(ctx, proposal.key, proposal.value);
             // int ret = storage_client.write_sstables(proposal.key, proposal.value);
@@ -640,7 +640,7 @@ void *simulation_handler(void *arg) {
         } else if (proposal.type == Request::Type::WriteCheck) {
             int user_id = distribution(generator);
             string key = "checking_" + to_string(user_id);
-            string value = s_kv_get(ctx, storage_client, key, endorsement);
+            string value = s_kv_get(*ctx, storage_client, key, endorsement);
             uint64_t balance;
             memcpy(&balance, value.c_str(), sizeof(uint64_t));
             if (balance >= 100) {
@@ -653,8 +653,8 @@ void *simulation_handler(void *arg) {
             string checking_key = "checking_" + to_string(user_id);
             string saving_key = "saving_" + to_string(user_id);
 
-            string checking_value = s_kv_get(ctx, storage_client, checking_key, endorsement);
-            string saving_value = s_kv_get(ctx, storage_client, saving_key, endorsement);
+            string checking_value = s_kv_get(*ctx, storage_client, checking_key, endorsement);
+            string saving_value = s_kv_get(*ctx, storage_client, saving_key, endorsement);
             uint64_t checking_balance, saving_balance;
             memcpy(&checking_balance, checking_value.c_str(), sizeof(uint64_t));
             memcpy(&saving_balance, saving_value.c_str(), sizeof(uint64_t));
@@ -669,8 +669,8 @@ void *simulation_handler(void *arg) {
             string checking_key = "checking_" + to_string(user_id);
             string saving_key = "saving_" + to_string(user_id);
 
-            string checking_value = s_kv_get(ctx, storage_client, checking_key, endorsement);
-            string saving_value = s_kv_get(ctx, storage_client, saving_key, endorsement);
+            string checking_value = s_kv_get(*ctx, storage_client, checking_key, endorsement);
+            string saving_value = s_kv_get(*ctx, storage_client, saving_key, endorsement);
             // log_info(stderr, "[R]Query: user_id = %d.", user_id);
         }
 
@@ -780,7 +780,7 @@ void *validation_handler(void *arg) {
         pthread_mutex_unlock(&bq.mutex);
 
         for (int trans_id = 0; trans_id < block.transactions_size(); trans_id++) {
-            validate_transaction(ctx, storage_client, compute_clients, block.block_id(), trans_id, block.transactions(trans_id));
+            validate_transaction(*ctx, storage_client, compute_clients, block.block_id(), trans_id, block.transactions(trans_id));
         }
 
         /* store the block with its bit mask in remote block store */
