@@ -1029,7 +1029,7 @@ class CoreManager {
             thread_contexts[context_index].end_flag = 1;
             
             // 等待线程完成
-            log_info(stderr, "Waiting for thread %lu to finish...", tid);
+            log_info(stderr, "Waiting for thread %lu to finish..., context index is %d", tid, thread_contexts[context_index].thread_index);
             pthread_join(tid, NULL);
             log_info(stderr, "Thread %lu has finished...", tid);
 
@@ -1209,7 +1209,7 @@ class CoreManager {
             log_info(stderr, "Removing core %d\n", core_id);
             
             // Stop all simulation threads for this core
-            log_info(stderr, "%d",sim_threads_by_core[core_id].size());
+            log_info(stderr, "size of sim_threads_by_core: %d", sim_threads_by_core[core_id].size());
             for (pthread_t tid : sim_threads_by_core[core_id]) {
                 log_info(stderr, "Stopping simulation thread %lu\n", tid);
                 int ctx_index = thread_to_context_index[tid];
