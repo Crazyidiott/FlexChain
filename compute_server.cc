@@ -1130,7 +1130,6 @@ class CoreManager {
         int add_core(int core_id) {
             std::lock_guard<std::mutex> lock(core_mutex);
 
-            log_info(stderr, "test place 1");
             
             // Check if the core is already active
             if (std::find(active_cores.begin(), active_cores.end(), core_id) != active_cores.end()) {
@@ -1138,7 +1137,6 @@ class CoreManager {
                 return -1;
             }
             
-            log_info(stderr, "test place 2");
 
 
             // Check if we have enough threads available
@@ -1153,7 +1151,6 @@ class CoreManager {
                 return -2;
             }
 
-            log_info(stderr, "test place 3");
 
             
             // Add the core to active cores
@@ -1168,7 +1165,6 @@ class CoreManager {
             }
             sim_threads_by_core[core_id] = sim_tids;
 
-            log_info(stderr, "test place 4");
 
             
             // Create validation threads
@@ -1230,6 +1226,9 @@ class CoreManager {
             
             int new_sim_count = sim_threads_per_core + d_sim;
             int new_val_count = val_threads_per_core + d_val;
+
+            log_info(stderr, "test place 1");
+
             
             // Ensure at least one thread of each type
             if (new_sim_count < 1 || new_val_count < 1) {
@@ -1245,6 +1244,9 @@ class CoreManager {
                 std::cerr << "Not enough thread contexts available for adjustment!" << std::endl;
                 return -2;
             }
+
+            log_info(stderr, "test place 2");
+
             
             // Process each core
             for (int core_id : active_cores) {
@@ -1255,8 +1257,11 @@ class CoreManager {
                     int sim_to_add = new_sim_count - current_sim_count;
                     
                     for (int i = 0; i < sim_to_add; i++) {
+                        log_info(stderr, "test place 3");
+
                         pthread_t tid = create_thread(core_id, true, 
                                                      current_sim_count + i);
+                        log_info(stderr, "test place 4");
                         sim_threads_by_core[core_id].push_back(tid);
                     }
                 } else if (d_sim < 0) {
