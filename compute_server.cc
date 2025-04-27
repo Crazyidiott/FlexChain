@@ -1026,7 +1026,10 @@ class CoreManager {
             thread_contexts[context_index].end_flag = true;
             
             // 等待线程完成
+            log_info(stderr, "Waiting for thread %lu to finish...", tid);
             pthread_join(tid, NULL);
+            log_info(stderr, "Thread %lu has finished...", tid);
+
             
             // 释放上下文和映射
             context_in_use[context_index] = false;

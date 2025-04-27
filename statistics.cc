@@ -135,7 +135,7 @@ void *statistics_thread(void *arg) {
     read_all_cpu_stats(prev_stats, cpu_count);
 
     while (!end_flag) {
-        sleep(5);
+        sleep(20);
 
         long current_ops = total_ops.load();
         long current_cache_hit = cache_hit.load();
