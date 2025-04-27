@@ -494,7 +494,9 @@ void *simulation_handler(void *arg) {
     char *buf = (char *)malloc(c_config_info.data_msg_size);
     long local_ops = 0;
     while (!ctx.end_flag) {
-        log_info(stderr, "thread_index = %d: end_flag is %d", ctx.thread_index,ctx.end_flag);
+        if (ctx.end_flag) {
+            log_info(stderr, "thread_index = %d: end_flag is %d", ctx.thread_index,ctx.end_flag);   
+        }
         sem_wait(&rq.full);
         pthread_mutex_lock(&rq.mutex);
         struct Request proposal;
@@ -685,6 +687,9 @@ void *simulation_handler(void *arg) {
         // }
 
         // total_ops++;
+        if (ctx.end_flag) {
+            log_info(stderr, "thread_index = %d: end_flag is %d", ctx.thread_index,ctx.end_flag);   
+        }
     }
     free(buf);
     return NULL;
