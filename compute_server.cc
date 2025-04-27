@@ -1321,6 +1321,7 @@ class CoreManager {
                 }
             }
             
+            log_info(stderr, "test place 5");
             // Update thread counts
             sim_threads_per_core = new_sim_count;
             val_threads_per_core = new_val_count;
