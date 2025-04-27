@@ -470,9 +470,9 @@ int s_kv_put(const string &key, const string &value, Endorsement &endorsement) {
 
 /* simulate smart contract (X stage) */
 void *simulation_handler(void *arg) {
-    struct ThreadContext ctx = *(struct ThreadContext *)arg;
-    assert(ctx.m_cq != NULL);
-    assert(ctx.m_qp != NULL);
+    struct ThreadContext *ctx = (struct ThreadContext *)arg;
+    assert(ctx->m_cq != NULL);
+    assert(ctx->m_qp != NULL);
     /* set up grpc client for storage server */
     KVStableClient storage_client(storage_channel_ptr);
     /* set up grpc client for ordering service */
@@ -496,8 +496,8 @@ void *simulation_handler(void *arg) {
 
     pthread_t my_tid = pthread_self();
     printf("My thread ID is %lu\n", (unsigned long)my_tid);
-    
-    while (!ctx.end_flag) {
+
+    while (!ctx->end_flag) {
         sem_wait(&rq.full);
         pthread_mutex_lock(&rq.mutex);
         struct Request proposal;
@@ -549,7 +549,7 @@ void *simulation_handler(void *arg) {
             uint64_t put_value;
             memcpy(&put_value, proposal.value.c_str(), sizeof(uint64_t));
             log_debug(logger_fp, "thread_index = #%d\trequest_type = PUT\nput_key = %s\nput_value = %ld\n",
-                      ctx.thread_index, proposal.key.c_str(), put_value);
+                      ctx->thread_index, proposal.key.c_str(), put_value);
             bzero(buf, c_config_info.data_msg_size);
             strcpy(buf, proposal.value.c_str());
             proposal.value.assign(buf, c_config_info.data_msg_size - meta_data_size);
@@ -577,7 +577,7 @@ void *simulation_handler(void *arg) {
                     //           ctx.thread_index, proposal.key.c_str(), put_value);
                 } else {
                     log_debug(logger_fp, "thread_index = #%d\trequest_type = PUT\nput_key = %s\noperation failed...\n",
-                              ctx.thread_index, proposal.key.c_str());
+                              ctx->thread_index, proposal.key.c_str());
                 }
                 continue;
             } else {
@@ -688,7 +688,7 @@ void *simulation_handler(void *arg) {
         // }
 
         // total_ops++;
-        if (ctx.end_flag) {
+        if (ctx->end_flag) {
             log_info(stderr, "thread_index = %d: end_flag is %d", ctx.thread_index,ctx.end_flag);   
         }
     }
@@ -761,7 +761,7 @@ bool validate_transaction(struct ThreadContext &ctx, KVStableClient &storage_cli
 }
 
 void *validation_handler(void *arg) {
-    struct ThreadContext ctx = *(struct ThreadContext *)arg;
+    struct ThreadContext *ctx = (struct ThreadContext *)arg;
     /* set up grpc client for storage server */
     KVStableClient storage_client(storage_channel_ptr);
     string serialised_block;
@@ -771,7 +771,7 @@ void *validation_handler(void *arg) {
         compute_clients.emplace_back(compute_channel_ptrs[i]);
     }
 
-    while (!ctx.end_flag) {
+    while (!ctx->end_flag) {
         sem_wait(&bq.full);
         pthread_mutex_lock(&bq.mutex);
         Block block = bq.bq_queue.front();
