@@ -1129,6 +1129,8 @@ class CoreManager {
         // Add a core with the current thread distribution
         int add_core(int core_id) {
             std::lock_guard<std::mutex> lock(core_mutex);
+
+            log_info(stderr, "test place 1");
             
             // Check if the core is already active
             if (std::find(active_cores.begin(), active_cores.end(), core_id) != active_cores.end()) {
@@ -1136,6 +1138,9 @@ class CoreManager {
                 return -1;
             }
             
+            log_info(stderr, "test place 2");
+
+
             // Check if we have enough threads available
             int total_threads_needed = sim_threads_per_core + val_threads_per_core;
             int current_total_threads = 0;
@@ -1147,6 +1152,9 @@ class CoreManager {
                 std::cerr << "Not enough thread contexts available!" << std::endl;
                 return -2;
             }
+
+            log_info(stderr, "test place 3");
+
             
             // Add the core to active cores
             active_cores.push_back(core_id);
@@ -1159,6 +1167,9 @@ class CoreManager {
                 sim_tids.push_back(tid);
             }
             sim_threads_by_core[core_id] = sim_tids;
+
+            log_info(stderr, "test place 4");
+
             
             // Create validation threads
             std::vector<pthread_t> val_tids;
