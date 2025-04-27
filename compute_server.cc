@@ -684,7 +684,7 @@ void *simulation_handler(void *arg) {
         // }
 
         // total_ops++;
-        if (!ctx.end_flag) {
+        if (ctx.end_flag) {
             log_info(stderr, "thread_index = %d: end_flag is %d", ctx.thread_index,ctx.end_flag);   
         }
     }
@@ -990,7 +990,7 @@ class CoreManager {
             // 初始化线程上下文
             ThreadContext* ctx = &thread_contexts[context_index];
             ctx->thread_index = thread_index;
-            ctx->end_flag = false;  // 初始化为不终止
+            ctx->end_flag = 0;  // 初始化为不终止
             
             if (is_simulation) {
                 pthread_create(&tid, NULL, simulation_handler, ctx);
@@ -1026,11 +1026,10 @@ class CoreManager {
             int context_index = it->second;
             
             // 标记线程应当终止
-            thread_contexts[context_index].end_flag = true;
+            thread_contexts[context_index].end_flag = 1;
             
             // 等待线程完成
             log_info(stderr, "Waiting for thread %lu to finish...", tid);
-            sem_post(&rq.full);
             pthread_join(tid, NULL);
             log_info(stderr, "Thread %lu has finished...", tid);
 
