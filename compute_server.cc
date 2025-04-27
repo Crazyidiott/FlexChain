@@ -493,6 +493,10 @@ void *simulation_handler(void *arg) {
 
     char *buf = (char *)malloc(c_config_info.data_msg_size);
     long local_ops = 0;
+
+    pthread_t my_tid = pthread_self();
+    printf("My thread ID is %lu\n", (unsigned long)my_tid);
+    
     while (!ctx.end_flag) {
         sem_wait(&rq.full);
         pthread_mutex_lock(&rq.mutex);
