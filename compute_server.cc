@@ -1414,6 +1414,10 @@ void run_server(const string &server_address, bool is_validator) {
     //=======================================================================
 
     //=================threads number adjustment=============================
+    core_manager.add_core(8);
+    core_manager.adjust_thread(1, 0);
+    sleep(10);
+    core_manager.remove_core(8);
     //=======================================================================
     
 
