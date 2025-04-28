@@ -1135,6 +1135,46 @@ class CoreManager {
         int get_max_threads() {
             return max_available_threads;
         }
+
+        // 添加单个验证线程到指定核心
+        int add_validation_thread(int core_id) {
+            std::lock_guard<std::mutex> lock(core_mutex);
+            
+            // 检查核心是否已经激活
+            auto it = std::find(active_cores.begin(), active_cores.end(), core_id);
+            if (it == active_cores.end()) {
+                // 如果核心不在活动列表中，我们需要先添加它
+                std::cerr << "Core " << core_id << " is not active, activating it first." << std::endl;
+                active_cores.push_back(core_id);
+                sim_threads_by_core[core_id] = std::vector<pthread_t>();
+                val_threads_by_core[core_id] = std::vector<pthread_t>();
+            }
+            
+            // 检查是否有足够的线程上下文可用
+            int current_total_threads = 0;
+            for (int core : active_cores) {
+                current_total_threads += sim_threads_by_core[core].size() + val_threads_by_core[core].size();
+            }
+            
+            if (current_total_threads + 1 > max_available_threads) {
+                std::cerr << "Not enough thread contexts available!" << std::endl;
+                return -1;
+            }
+            
+            // 创建新的验证线程
+            int thread_index = current_total_threads;
+            pthread_t tid = create_thread(core_id, false, thread_index);
+            if (tid == 0) {
+                std::cerr << "Failed to create validation thread!" << std::endl;
+                return -2;
+            }
+            
+            // 添加到该核心的验证线程列表
+            val_threads_by_core[core_id].push_back(tid);
+            
+            log_info(stderr, "Added validation thread %lu to core %d", tid, core_id);
+            return 0; // 成功
+        }
         
         // Add a core with the current thread distribution
         int add_core(int core_id) {
@@ -1380,9 +1420,10 @@ void run_server(const string &server_address, bool is_validator) {
     int num_threads = c_config_info.num_qps_per_server;
     int num_sim_threads = c_config_info.num_sim_threads;
     //TODO: HARD CODED
-    CoreManager core_manager(1, 1, num_threads);
+    CoreManager core_manager(1, 0, num_threads);
     // std::vector<int> specific_cores = {0}; 
-    core_manager.initialize(32);
+    core_manager.initialize(31);
+    core_manager.add_validation_thread(31);
     // #region original initialization code
     // pthread_t tid[num_threads];
     // struct ThreadContext *ctxs = (struct ThreadContext *)calloc(num_threads, sizeof(struct ThreadContext));
