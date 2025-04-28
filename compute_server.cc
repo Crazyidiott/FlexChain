@@ -1380,9 +1380,9 @@ void run_server(const string &server_address, bool is_validator) {
     int num_threads = c_config_info.num_qps_per_server;
     int num_sim_threads = c_config_info.num_sim_threads;
     //TODO: HARD CODED
-    CoreManager core_manager(2, 1, num_threads);
-    std::vector<int> specific_cores = {0,1}; 
-    core_manager.initialize(2, specific_cores);
+    CoreManager core_manager(1, 1, num_threads);
+    std::vector<int> specific_cores = {0}; 
+    core_manager.initialize(1, specific_cores);
     // #region original initialization code
     // pthread_t tid[num_threads];
     // struct ThreadContext *ctxs = (struct ThreadContext *)calloc(num_threads, sizeof(struct ThreadContext));
@@ -1450,8 +1450,10 @@ void run_server(const string &server_address, bool is_validator) {
     //=================threads number adjustment=============================
     sleep(10);
     // core_manager.add_core(8);
-    // core_manager.adjust_thread(1, 0);
+    core_manager.adjust_thread(-1, 0);
     sleep(10);
+    core_manager.adjust_thread(1, 0);
+
     // core_manager.remove_core(0);
     //=======================================================================
     
