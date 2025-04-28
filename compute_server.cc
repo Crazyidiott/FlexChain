@@ -1381,8 +1381,8 @@ void run_server(const string &server_address, bool is_validator) {
     int num_sim_threads = c_config_info.num_sim_threads;
     //TODO: HARD CODED
     CoreManager core_manager(1, 1, num_threads);
-    std::vector<int> specific_cores = {0}; 
-    core_manager.initialize(1, specific_cores);
+    std::vector<int> specific_cores = {0,1}; 
+    core_manager.initialize(2, specific_cores);
     // #region original initialization code
     // pthread_t tid[num_threads];
     // struct ThreadContext *ctxs = (struct ThreadContext *)calloc(num_threads, sizeof(struct ThreadContext));
