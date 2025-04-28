@@ -1459,6 +1459,7 @@ void run_server(const string &server_address, bool is_validator) {
     //===================initialize data and start client=====================
     /* microbenchmark logics */
     // test_get_only();
+    log_info(stderr, "prepopulate data...");
     prepopulate();
     if (is_validator) {
         for (int i = 0; i < compute_clients.size(); i++) {
