@@ -298,12 +298,14 @@ void *client_thread(void *arg) {
         for (int i = 0; i < trans_per_interval; i++) {
             /* YCSB workload */
             struct Request req1;
-            int number = ycsb_distribution(generator);
+            // int number = ycsb_distribution(generator);
+            int number = kmeans_distribution(generator);
             // int number = zipf(2.0, key_num);
             req1.key = "key_y_" + to_string(number);
             req1.value = "value_" + to_string(number);
             req1.is_prep = false;
-            if (ycsb_pw_distribution(generator)) {
+            // if (ycsb_pw_distribution(generator)) {
+            if (kmeans_pw_distribution(generator)) {
                 req1.type = Request::Type::PUT;
             } else {
                 req1.type = Request::Type::GET;
@@ -367,74 +369,74 @@ void prepopulate() {
     default_random_engine generator;
     uniform_int_distribution<int> distribution(0, KMEANS_KEY_NUM - 1);
 
-    for (int i = YCSB_KEY_NUM; i >= 0; i--) {
-        /* prepopulate - YSCB workload */
-        struct Request req;
-        req.type = Request::Type::PUT;
-        req.key = "key_y_" + to_string(i);
-        req.value = "value_" + to_string(i);
-        req.is_prep = true;
-        pthread_mutex_lock(&rq.mutex);
-        rq.rq_queue.push(req);
-        pthread_mutex_unlock(&rq.mutex);
-        sem_post(&rq.full);
-
-        /* prepopulate - machine learning workload */
-        // struct Request req;
-        // req.type = Request::Type::PUT;
-        // req.key = "key_" + to_string(i);
-        // uint64_t val_number = distribution(generator);
-        // char *buf = (char *)malloc(sizeof(uint64_t));
-        // memcpy(buf, &val_number, sizeof(uint64_t));
-        // req.value = string(buf, sizeof(uint64_t));
-        // free(buf);
-        // req.is_prep = true;
-        // pthread_mutex_lock(&rq.mutex);
-        // rq.rq_queue.push(req);
-        // pthread_mutex_unlock(&rq.mutex);
-        // sem_post(&rq.full);
-
-        /* prepopulate - smallbank workload */
-        // struct Request req;
-        // req.type = Request::Type::PUT;
-        // req.key = "checking_" + to_string(i);
-        // uint64_t balance = distribution(generator);
-        // char *buf = (char *)malloc(sizeof(uint64_t));
-        // memcpy(buf, &balance, sizeof(uint64_t));
-        // req.value = string(buf, sizeof(uint64_t));
-        // req.is_prep = true;
-        // pthread_mutex_lock(&rq.mutex);
-        // rq.rq_queue.push(req);
-        // pthread_mutex_unlock(&rq.mutex);
-        // sem_post(&rq.full);
-
-        // req.key = "saving_" + to_string(i);
-        // balance = distribution(generator);
-        // memcpy(buf, &balance, sizeof(uint64_t));
-        // req.value = string(buf, sizeof(uint64_t));
-        // free(buf);
-        // pthread_mutex_lock(&rq.mutex);
-        // rq.rq_queue.push(req);
-        // pthread_mutex_unlock(&rq.mutex);
-        // sem_post(&rq.full);
-    }
-
-    // for (int i = KMEANS_KEY_NUM; i >= 0; i--) {
-    //     /* prepopulate - machine learning workload */
+    // for (int i = YCSB_KEY_NUM; i >= 0; i--) {
+    //     /* prepopulate - YSCB workload */
     //     struct Request req;
     //     req.type = Request::Type::PUT;
-    //     req.key = "key_k_" + to_string(i);
-    //     uint64_t val_number = distribution(generator);
-    //     char *buf = (char *)malloc(sizeof(uint64_t));
-    //     memcpy(buf, &val_number, sizeof(uint64_t));
-    //     req.value = string(buf, sizeof(uint64_t));
-    //     free(buf);
+    //     req.key = "key_y_" + to_string(i);
+    //     req.value = "value_" + to_string(i);
     //     req.is_prep = true;
     //     pthread_mutex_lock(&rq.mutex);
     //     rq.rq_queue.push(req);
     //     pthread_mutex_unlock(&rq.mutex);
     //     sem_post(&rq.full);
+
+    //     /* prepopulate - machine learning workload */
+    //     // struct Request req;
+    //     // req.type = Request::Type::PUT;
+    //     // req.key = "key_" + to_string(i);
+    //     // uint64_t val_number = distribution(generator);
+    //     // char *buf = (char *)malloc(sizeof(uint64_t));
+    //     // memcpy(buf, &val_number, sizeof(uint64_t));
+    //     // req.value = string(buf, sizeof(uint64_t));
+    //     // free(buf);
+    //     // req.is_prep = true;
+    //     // pthread_mutex_lock(&rq.mutex);
+    //     // rq.rq_queue.push(req);
+    //     // pthread_mutex_unlock(&rq.mutex);
+    //     // sem_post(&rq.full);
+
+    //     /* prepopulate - smallbank workload */
+    //     // struct Request req;
+    //     // req.type = Request::Type::PUT;
+    //     // req.key = "checking_" + to_string(i);
+    //     // uint64_t balance = distribution(generator);
+    //     // char *buf = (char *)malloc(sizeof(uint64_t));
+    //     // memcpy(buf, &balance, sizeof(uint64_t));
+    //     // req.value = string(buf, sizeof(uint64_t));
+    //     // req.is_prep = true;
+    //     // pthread_mutex_lock(&rq.mutex);
+    //     // rq.rq_queue.push(req);
+    //     // pthread_mutex_unlock(&rq.mutex);
+    //     // sem_post(&rq.full);
+
+    //     // req.key = "saving_" + to_string(i);
+    //     // balance = distribution(generator);
+    //     // memcpy(buf, &balance, sizeof(uint64_t));
+    //     // req.value = string(buf, sizeof(uint64_t));
+    //     // free(buf);
+    //     // pthread_mutex_lock(&rq.mutex);
+    //     // rq.rq_queue.push(req);
+    //     // pthread_mutex_unlock(&rq.mutex);
+    //     // sem_post(&rq.full);
     // }
+
+    for (int i = KMEANS_KEY_NUM; i >= 0; i--) {
+        /* prepopulate - machine learning workload */
+        struct Request req;
+        req.type = Request::Type::PUT;
+        req.key = "key_k_" + to_string(i);
+        uint64_t val_number = distribution(generator);
+        char *buf = (char *)malloc(sizeof(uint64_t));
+        memcpy(buf, &val_number, sizeof(uint64_t));
+        req.value = string(buf, sizeof(uint64_t));
+        free(buf);
+        req.is_prep = true;
+        pthread_mutex_lock(&rq.mutex);
+        rq.rq_queue.push(req);
+        pthread_mutex_unlock(&rq.mutex);
+        sem_post(&rq.full);
+    }
 
     sleep(5);
 
