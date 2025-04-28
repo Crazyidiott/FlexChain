@@ -298,14 +298,14 @@ void *client_thread(void *arg) {
         for (int i = 0; i < trans_per_interval; i++) {
             /* YCSB workload */
             struct Request req1;
-            // int number = ycsb_distribution(generator);
-            int number = kmeans_distribution(generator);
+            int number = ycsb_distribution(generator);
+            // int number = kmeans_distribution(generator);
             // int number = zipf(2.0, key_num);
-            req1.key = "key_k_" + to_string(number);
+            req1.key = "key_y_" + to_string(number);
             req1.value = "value_" + to_string(number);
             req1.is_prep = false;
-            // if (ycsb_pw_distribution(generator)) {
-            if (kmeans_pw_distribution(generator)) {
+            if (ycsb_pw_distribution(generator)) {
+            // if (kmeans_pw_distribution(generator)) {
                 req1.type = Request::Type::PUT;
             } else {
                 req1.type = Request::Type::GET;
