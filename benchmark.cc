@@ -279,7 +279,7 @@ string get_balance_str(uint64_t balance, size_t length) {
 }
 
 void *client_thread(void *arg) {
-    int trans_per_interval = 5000;
+    int trans_per_interval = 500;
     int interval = 50000;
 
     default_random_engine generator;
