@@ -22,7 +22,7 @@
 
 #include "storage.grpc.pb.h"
 
-#define EVICT_THR 30
+#define EVICT_THR 100
 
 using namespace std;
 using grpc::Channel;
