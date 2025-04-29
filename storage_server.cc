@@ -10,6 +10,10 @@
 #include <fstream>
 #include <string>
 
+//for test
+#include <iomanip>
+#include <sstream>
+
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
 #include "log.h"
@@ -51,7 +55,17 @@ class KVStableImpl final : public KVStable::Service {
             // 从完整值中提取实际值部分，去除元数据
 
             log_info(stderr, "write[key = %s]: complete value = %s", it->first.c_str(), it->second.c_str());
-
+            
+            std::stringstream hex_stream;
+            hex_stream << "0x";
+            for (size_t i = 0; i < std::min(it->second.size(), size_t(30)); ++i) {
+                hex_stream << std::hex << std::setw(2) << std::setfill('0') 
+                        << static_cast<int>(static_cast<unsigned char>(it->second[i]));
+                if ((i + 1) % 4 == 0) hex_stream << " "; // 每4个字节一个空格，增强可读性
+            }
+            log_info(stderr, "write[key = %s]: binary value (first 30 bytes): %s%s", 
+                    it->first.c_str(), hex_stream.str().c_str(), 
+                    it->second.size() > 30 ? "..." : "");
 
             log_debug(stderr, "write[key = %s]: value = %s is add to the batch.", it->first.c_str(), actual_value.c_str());
             // 记录调试信息，显示添加到批处理的键和值
