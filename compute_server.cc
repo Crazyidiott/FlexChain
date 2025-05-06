@@ -1420,7 +1420,7 @@ void run_server(const string &server_address, bool is_validator) {
     int num_threads = c_config_info.num_qps_per_server;
     int num_sim_threads = c_config_info.num_sim_threads;
     //TODO: HARD CODED
-    CoreManager core_manager(1, 0, num_threads);
+    CoreManager core_manager(2, 0, num_threads);
     // std::vector<int> specific_cores = {0}; 
     core_manager.initialize(15);
     core_manager.add_validation_thread(15);
