@@ -21,6 +21,7 @@ using namespace std;
 struct QPInfo {
     uint16_t lid;
     uint32_t qp_num;
+    char gid_raw[16]; // 存储GID的原始字节
 } __attribute__((packed));
 
 vector<string> split(const string &s, const string &delim);
@@ -40,5 +41,9 @@ int post_write_with_imm(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32
 
 int sock_read(int sock_fd, char *buf, size_t len);
 int sock_write(int sock_fd, char *buf, size_t len);
+
+// 辅助函数
+void print_device_info(struct ibv_context *ctx, int port_num);
+void print_gid(const char *prefix, const char *gid_raw);
 
 #endif

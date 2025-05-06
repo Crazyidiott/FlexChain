@@ -249,3 +249,60 @@ void wait_completion(ibv_comp_channel *comp_channel, ibv_cq *cq, enum ibv_wc_opc
         } while (ne);
     }
 }
+
+void print_device_info(struct ibv_context *ctx, int port_num) {
+    struct ibv_device_attr device_attr;
+    struct ibv_port_attr port_attr;
+    
+    if (ibv_query_device(ctx, &device_attr)) {
+        log_err("Failed to query device attributes");
+        return;
+    }
+    
+    if (ibv_query_port(ctx, port_num, &port_attr)) {
+        log_err("Failed to query port attributes");
+        return;
+    }
+    
+    log_info(stderr, "Device: %s", ibv_get_device_name(ctx->device));
+    log_info(stderr, "  fw_ver: %s", device_attr.fw_ver);
+    log_info(stderr, "  node_guid: %016" PRIx64, be64toh(device_attr.node_guid));
+    log_info(stderr, "  max_qp: %d", device_attr.max_qp);
+    log_info(stderr, "  max_cq: %d", device_attr.max_cq);
+    log_info(stderr, "  max_mr: %d", device_attr.max_mr);
+    log_info(stderr, "  max_pd: %d", device_attr.max_pd);
+    log_info(stderr, "  max_qp_wr: %d", device_attr.max_qp_wr);
+    
+    log_info(stderr, "Port %d:", port_num);
+    log_info(stderr, "  state: %d", port_attr.state);
+    log_info(stderr, "  max_mtu: %d", port_attr.max_mtu);
+    log_info(stderr, "  active_mtu: %d", port_attr.active_mtu);
+    log_info(stderr, "  lid: %d", port_attr.lid);
+    log_info(stderr, "  sm_lid: %d", port_attr.sm_lid);
+    
+    // 打印端口上的所有GID
+    for (int i = 0; i < 1; i++) { // 通常只使用第一个GID
+        union ibv_gid gid;
+        if (!ibv_query_gid(ctx, port_num, i, &gid)) {
+            log_info(stderr, "  gid[%d]: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
+                    i,
+                    gid.raw[0], gid.raw[1], gid.raw[2], gid.raw[3], 
+                    gid.raw[4], gid.raw[5], gid.raw[6], gid.raw[7],
+                    gid.raw[8], gid.raw[9], gid.raw[10], gid.raw[11],
+                    gid.raw[12], gid.raw[13], gid.raw[14], gid.raw[15]);
+        }
+    }
+}
+
+void print_gid(const char *prefix, const char *gid_raw) {
+    log_info(stderr, "%s: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
+            prefix,
+            (unsigned char)gid_raw[0], (unsigned char)gid_raw[1], 
+            (unsigned char)gid_raw[2], (unsigned char)gid_raw[3],
+            (unsigned char)gid_raw[4], (unsigned char)gid_raw[5], 
+            (unsigned char)gid_raw[6], (unsigned char)gid_raw[7],
+            (unsigned char)gid_raw[8], (unsigned char)gid_raw[9], 
+            (unsigned char)gid_raw[10], (unsigned char)gid_raw[11],
+            (unsigned char)gid_raw[12], (unsigned char)gid_raw[13], 
+            (unsigned char)gid_raw[14], (unsigned char)gid_raw[15]);
+}
