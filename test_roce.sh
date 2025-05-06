@@ -15,7 +15,7 @@ ip -o addr show | grep -i "infini"
 # 测试RoCE连接
 echo "Testing RoCE connectivity:"
 # 假设我们有两个节点node1和node2
-ibv_rc_pingpong -d rxe_0 -g 0 (在一个节点上)
-ibv_rc_pingpong -d rxe_0 -g 0 127.0.0.1 (在另一个节点上)
+ibv_rc_pingpong -d rxe_0 -g 0 &
+ibv_rc_pingpong -d rxe_0 -g 0 127.0.0.1
 
 echo "Test complete!"
