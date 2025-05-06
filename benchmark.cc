@@ -372,15 +372,15 @@ void prepopulate() {
     for (int i = YCSB_KEY_NUM; i >= 0; i--) {
         /* prepopulate - YSCB workload */
         // log_info(stderr, "prepopulate key_y_%d", i);
-        struct Request req;
-        req.type = Request::Type::PUT;
-        req.key = "key_y_" + to_string(i);
-        req.value = "value_" + to_string(i);
-        req.is_prep = true;
-        pthread_mutex_lock(&rq.mutex);
-        rq.rq_queue.push(req);
-        pthread_mutex_unlock(&rq.mutex);
-        sem_post(&rq.full);
+        // struct Request req;
+        // req.type = Request::Type::PUT;
+        // req.key = "key_y_" + to_string(i);
+        // req.value = "value_" + to_string(i);
+        // req.is_prep = true;
+        // pthread_mutex_lock(&rq.mutex);
+        // rq.rq_queue.push(req);
+        // pthread_mutex_unlock(&rq.mutex);
+        // sem_post(&rq.full);
 
         /* prepopulate - machine learning workload */
         // struct Request req;
@@ -422,22 +422,22 @@ void prepopulate() {
         // sem_post(&rq.full);
     }
 
-    // for (int i = KMEANS_KEY_NUM; i >= 0; i--) {
-    //     /* prepopulate - machine learning workload */
-    //     struct Request req;
-    //     req.type = Request::Type::PUT;
-    //     req.key = "key_k_" + to_string(i);
-    //     uint64_t val_number = distribution(generator);
-    //     char *buf = (char *)malloc(sizeof(uint64_t));
-    //     memcpy(buf, &val_number, sizeof(uint64_t));
-    //     req.value = string(buf, sizeof(uint64_t));
-    //     free(buf);
-    //     req.is_prep = true;
-    //     pthread_mutex_lock(&rq.mutex);
-    //     rq.rq_queue.push(req);
-    //     pthread_mutex_unlock(&rq.mutex);
-    //     sem_post(&rq.full);
-    // }
+    for (int i = KMEANS_KEY_NUM; i >= 0; i--) {
+        /* prepopulate - machine learning workload */
+        struct Request req;
+        req.type = Request::Type::PUT;
+        req.key = "key_k_" + to_string(i);
+        uint64_t val_number = distribution(generator);
+        char *buf = (char *)malloc(sizeof(uint64_t));
+        memcpy(buf, &val_number, sizeof(uint64_t));
+        req.value = string(buf, sizeof(uint64_t));
+        free(buf);
+        req.is_prep = true;
+        pthread_mutex_lock(&rq.mutex);
+        rq.rq_queue.push(req);
+        pthread_mutex_unlock(&rq.mutex);
+        sem_post(&rq.full);
+    }
 
     sleep(5);
 
