@@ -297,41 +297,41 @@ void *client_thread(void *arg) {
 
         for (int i = 0; i < trans_per_interval; i++) {
             /* YCSB workload */
-            struct Request req1;
-            int number = ycsb_distribution(generator);
-            // int number = zipf(2.0, key_num);
-            req1.key = "key_y_" + to_string(number);
-            req1.value = "value_" + to_string(number);
-            req1.is_prep = false;
-            if (ycsb_pw_distribution(generator)) {
-                req1.type = Request::Type::PUT;
-            } else {
-                req1.type = Request::Type::GET;
-            }
-            pthread_mutex_lock(&rq.mutex);
-            rq.rq_queue.push(req1);
-            pthread_mutex_unlock(&rq.mutex);
-            sem_post(&rq.full);
-
-            /* machine learning workload */
-            // struct Request req2;
-            // if (kmeans_pw_distribution(generator)) {
-            //     req2.type = Request::Type::KMEANS;
+            // struct Request req1;
+            // int number = ycsb_distribution(generator);
+            // // int number = zipf(2.0, key_num);
+            // req1.key = "key_y_" + to_string(number);
+            // req1.value = "value_" + to_string(number);
+            // req1.is_prep = false;
+            // if (ycsb_pw_distribution(generator)) {
+            //     req1.type = Request::Type::PUT;
             // } else {
-            //     req2.type = Request::Type::PUT;
-            //     int key_number = kmeans_distribution(generator);
-            //     req2.key = "key_k_" + to_string(key_number);
-            //     uint64_t val_number = kmeans_distribution(generator);
-            //     char *buf = (char *)malloc(sizeof(uint64_t));
-            //     memcpy(buf, &val_number, sizeof(uint64_t));
-            //     req2.value = string(buf, sizeof(uint64_t));
-            //     free(buf);
+            //     req1.type = Request::Type::GET;
             // }
-            // req2.is_prep = false;
             // pthread_mutex_lock(&rq.mutex);
-            // rq.rq_queue.push(req2);
+            // rq.rq_queue.push(req1);
             // pthread_mutex_unlock(&rq.mutex);
             // sem_post(&rq.full);
+
+            /* machine learning workload */
+            struct Request req2;
+            if (kmeans_pw_distribution(generator)) {
+                req2.type = Request::Type::KMEANS;
+            } else {
+                req2.type = Request::Type::PUT;
+                int key_number = kmeans_distribution(generator);
+                req2.key = "key_k_" + to_string(key_number);
+                uint64_t val_number = kmeans_distribution(generator);
+                char *buf = (char *)malloc(sizeof(uint64_t));
+                memcpy(buf, &val_number, sizeof(uint64_t));
+                req2.value = string(buf, sizeof(uint64_t));
+                free(buf);
+            }
+            req2.is_prep = false;
+            pthread_mutex_lock(&rq.mutex);
+            rq.rq_queue.push(req2);
+            pthread_mutex_unlock(&rq.mutex);
+            sem_post(&rq.full);
 
             /* smallbank workload */
             // struct Request req;
