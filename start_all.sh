@@ -1,5 +1,5 @@
 #!/bin/bash
-
+killall storage_server memory_server orderer compute_server
 # 确保Soft-RoCE已加载
 echo "Ensuring Soft-RoCE is loaded..."
 if ! lsmod | grep -q rdma_rxe; then
