@@ -1,6 +1,7 @@
 #include "orderer.h"
 #include "log.h"
 #include "utils.h"
+#include <sys/stat.h>
 
 atomic<unsigned long> commit_index(0);
 atomic<unsigned long> last_log_index(0);
@@ -85,7 +86,7 @@ void *block_formation_thread(void *arg) {
         // log_info(stderr, "block formation thread: channel for validator is in ready state.");
         stub = ComputeComm::NewStub(channel);
     }
-
+    std::string log_file_path = "./consensus/raft.log";
     ifstream logi("./consensus/raft.log", ios::in);
     assert(logi.is_open());
 
@@ -131,54 +132,66 @@ void *block_formation_thread(void *arg) {
 
         if (commit_index > last_applied) {
             last_applied++;
-            /* put the entry in current block and generate dependency graph */
+
+            // 获取当前文件写入的位置
+            std::streampos current_read_pos = logi.tellg();
+            logi.clear(); // 清理任何错误状态，不清除会影响seekg
+
+            struct stat file_stat;
+            if (stat(log_file_path.c_str(), &file_stat) != 0) {
+                perror("stat failed");
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+                continue;
+            }
+            off_t file_size = file_stat.st_size;
+
+            // 判断是否可以读取size
+            if (current_read_pos + sizeof(uint32_t) > file_size) {
+                // size都读不了，说明写线程没写完，等
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+                continue;
+            }
+
             uint32_t size;
-            
-            // control the delay.../////
-            // if(logi.tellg() == -1)
-            //     logi.clear();
-
-            if (logi.eof() || !logi.good()) {
-                // 文件结束或读取错误，稍后重试
-                // std::cout << "End of file reached or read error. Retrying..." << std::endl;
-                std::this_thread::sleep_for(std::chrono::nanoseconds(10));
-                logi.clear();
-                continue;
-            }
-            // control the delay.../////
-
-
-            // std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
             logi.read((char *)&size, sizeof(uint32_t));
-            // std::cout << "After read: tellg=" << logi.tellg() << ",size=" << size << ",good=" << logi.good() << ",fail=" << logi.fail() << std::endl;
-            
-            if (logi.eof() || !logi.good()) {
-                // 文件结束或读取错误，稍后重试
-                // std::cout << "End of file reached or read error. Retrying..." << std::endl;
-                std::this_thread::sleep_for(std::chrono::nanoseconds(10));
-                // logi.clear();
+            if (!logi.good()) {
+                // 读取错误
+                logi.clear();
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
                 continue;
             }
 
-            char *entry_ptr = (char *)malloc(size);
+            // 判断是否可以读取size字节
+            current_read_pos = logi.tellg(); // 更新读指针
+            if (current_read_pos + size > file_size) {
+                // 说明size部分还没写完
+                // 回退
+                logi.seekg(-(std::streamoff)sizeof(uint32_t), std::ios::cur);
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+                continue;
+            }
 
-            // std::cout << "Before read: tellg=" << logi.tellg() << std::endl;
+            // 真正读取数据
+            char *entry_ptr = (char *)malloc(size);
             logi.read(entry_ptr, size);
-            // std::cout << "After read: tellg=" << logi.tellg() << ",size=" << size << ",good=" << logi.good() << ",fail=" << logi.fail() << std::endl;
+            if (!logi.good()) {
+                free(entry_ptr);
+                logi.clear();
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+                continue;
+            }
 
             curr_size += size;
             string serialized_transaction(entry_ptr, size);
             free(entry_ptr);
 
-            // abort();
-
-            /* build dependency graph */
             log_debug(stderr, "[block_id = %d, trans_id = %d]: added transaction to block.", block_index, trans_index);
             Endorsement *transaction = block.add_transactions();
             if (!transaction->ParseFromString(serialized_transaction)) {
                 log_err("block formation thread: error in deserialising transaction.");
             }
             local_ops++;
+        
 
             // unordered_set<string> read_set;
             // unordered_set<string> write_set;

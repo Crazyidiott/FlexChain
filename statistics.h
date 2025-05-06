@@ -7,11 +7,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+#include <ctype.h>
 #include "log.h"
 
 void start_statistics_thread();
 void stop_statistics_thread();
 void *statistics_thread(void *arg);
+void *statistics_thread_avg(void *arg);
 
 extern std::atomic<long> total_ops;
 extern std::atomic<long> abort_count;

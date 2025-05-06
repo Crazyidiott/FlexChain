@@ -279,8 +279,8 @@ string get_balance_str(uint64_t balance, size_t length) {
 }
 
 void *client_thread(void *arg) {
-    int trans_per_interval = 5000;
-    int interval = 50000;
+    int trans_per_interval = 500;
+    int interval = 5000;
 
     default_random_engine generator;
     uniform_int_distribution<int> ycsb_distribution(0, YCSB_KEY_NUM - 1);
@@ -299,11 +299,13 @@ void *client_thread(void *arg) {
             /* YCSB workload */
             struct Request req1;
             int number = ycsb_distribution(generator);
+            // int number = kmeans_distribution(generator);
             // int number = zipf(2.0, key_num);
             req1.key = "key_y_" + to_string(number);
             req1.value = "value_" + to_string(number);
             req1.is_prep = false;
             if (ycsb_pw_distribution(generator)) {
+            // if (kmeans_pw_distribution(generator)) {
                 req1.type = Request::Type::PUT;
             } else {
                 req1.type = Request::Type::GET;
@@ -369,6 +371,7 @@ void prepopulate() {
 
     for (int i = YCSB_KEY_NUM; i >= 0; i--) {
         /* prepopulate - YSCB workload */
+        log_info(stderr, "prepopulate key_y_%d", i);
         struct Request req;
         req.type = Request::Type::PUT;
         req.key = "key_y_" + to_string(i);

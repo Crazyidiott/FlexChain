@@ -431,20 +431,45 @@ int run_server() {
 }
 
 void KVStableClient::write_sstables(const set<string> &keys) {
+    // 这个方法负责将一组键对应的数据从内存写入到持久化存储(SSTable)
+    // 接收一个键的集合作为参数，这些键代表要被驱逐到存储层的数据
+    
     ClientContext context;
+    // 创建一个gRPC客户端上下文对象，用于远程过程调用
+    
     EvictedBuffers ev;
+    // 创建一个EvictedBuffers消息对象，这是在storage.proto中定义的protobuf消息类型
+    // 用于存储要被驱逐的键值对
+    
     EvictionResponse rsp;
-
+    // 创建一个EvictionResponse消息对象，用于接收服务器的响应
+    
     for (auto it = keys.begin(); it != keys.end(); it++) {
+        // 遍历所有需要驱逐的键
+        
         string key(*it);
+        // 获取当前键的副本
+        
         char *ptr = (char *)key_to_addr[*it].ptr_next;
+        // 从key_to_addr哈希表中获取该键对应的内存地址
+        // ptr_next字段存储了该键的最新版本的数据在内存中的位置
+        
         string value(ptr, m_config_info.data_msg_size);
+        // 创建一个字符串，包含从ptr指向的地址开始，长度为data_msg_size的数据
+        // 这里直接使用了固定的消息大小，而不是根据实际数据大小来定
+        
         (*ev.mutable_eviction())[key] = value;
+        // 将键值对添加到EvictedBuffers消息的eviction映射字段中
+        // mutable_eviction()返回一个可修改的映射引用
     }
-
+    
     Status status = stub_->write_sstables(&context, ev, &rsp);
+    // 调用远程存储服务的write_sstables方法，发送驱逐的键值对
+    // stub_是KVStable::Stub的实例，通过gRPC通道连接到存储服务器
+    
     if (!status.ok()) {
         log_err("gRPC failed with error message: %s.", status.error_message().c_str());
+        // 如果gRPC调用失败，记录错误信息
     }
 }
 

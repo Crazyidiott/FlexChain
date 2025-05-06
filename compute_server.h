@@ -43,6 +43,7 @@ using grpc::Status;
 
 struct ThreadContext {
     int thread_index;
+    volatile int end_flag;
     struct ibv_qp* m_qp;
     struct ibv_cq* m_cq;
 };

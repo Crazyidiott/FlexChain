@@ -470,9 +470,9 @@ int s_kv_put(const string &key, const string &value, Endorsement &endorsement) {
 
 /* simulate smart contract (X stage) */
 void *simulation_handler(void *arg) {
-    struct ThreadContext ctx = *(struct ThreadContext *)arg;
-    assert(ctx.m_cq != NULL);
-    assert(ctx.m_qp != NULL);
+    struct ThreadContext *ctx = (struct ThreadContext *)arg;
+    assert(ctx->m_cq != NULL);
+    assert(ctx->m_qp != NULL);
     /* set up grpc client for storage server */
     KVStableClient storage_client(storage_channel_ptr);
     /* set up grpc client for ordering service */
@@ -493,7 +493,11 @@ void *simulation_handler(void *arg) {
 
     char *buf = (char *)malloc(c_config_info.data_msg_size);
     long local_ops = 0;
-    while (!end_flag) {
+
+    pthread_t my_tid = pthread_self();
+    printf("My thread ID is %lu\n", (unsigned long)my_tid);
+
+    while (!ctx->end_flag) {
         sem_wait(&rq.full);
         pthread_mutex_lock(&rq.mutex);
         struct Request proposal;
@@ -518,7 +522,7 @@ void *simulation_handler(void *arg) {
             //           ctx.thread_index, proposal.key.c_str(), value.c_str(), value.size());
             // local_ops++;
 
-            s_kv_get(ctx, storage_client, proposal.key, endorsement);
+            s_kv_get(*ctx, storage_client, proposal.key, endorsement);
         } else if (proposal.type == Request::Type::PUT) {
             // int ret = kv_put(ctx, proposal.key, proposal.value);
             // int ret = storage_client.write_sstables(proposal.key, proposal.value);
@@ -545,7 +549,7 @@ void *simulation_handler(void *arg) {
             uint64_t put_value;
             memcpy(&put_value, proposal.value.c_str(), sizeof(uint64_t));
             log_debug(logger_fp, "thread_index = #%d\trequest_type = PUT\nput_key = %s\nput_value = %ld\n",
-                      ctx.thread_index, proposal.key.c_str(), put_value);
+                      ctx->thread_index, proposal.key.c_str(), put_value);
             bzero(buf, c_config_info.data_msg_size);
             strcpy(buf, proposal.value.c_str());
             proposal.value.assign(buf, c_config_info.data_msg_size - meta_data_size);
@@ -560,7 +564,7 @@ void *simulation_handler(void *arg) {
                 string value(ver, 2 * sizeof(uint64_t));
                 value += proposal.value;
 
-                int ret = kv_put(ctx, compute_clients, proposal.key, value);
+                int ret = kv_put(*ctx, compute_clients, proposal.key, value);
                 // leveldb::Status s = db->Put(leveldb::WriteOptions(), proposal.key, value);
                 // int ret = 0;
                 // if (!s.ok()) {
@@ -573,7 +577,7 @@ void *simulation_handler(void *arg) {
                     //           ctx.thread_index, proposal.key.c_str(), put_value);
                 } else {
                     log_debug(logger_fp, "thread_index = #%d\trequest_type = PUT\nput_key = %s\noperation failed...\n",
-                              ctx.thread_index, proposal.key.c_str());
+                              ctx->thread_index, proposal.key.c_str());
                 }
                 continue;
             } else {
@@ -588,7 +592,7 @@ void *simulation_handler(void *arg) {
             for (int i = 0; i < num_keys_per_trans; i++) {
                 int random_number = distribution(generator);
                 string key = "key_k_" + to_string(random_number);
-                string value = s_kv_get(ctx, storage_client, key, endorsement);
+                string value = s_kv_get(*ctx, storage_client, key, endorsement);
                 uint64_t data;
                 memcpy(&data, value.c_str(), sizeof(uint64_t));
                 A.push_back(data);
@@ -597,7 +601,7 @@ void *simulation_handler(void *arg) {
         } else if (proposal.type == Request::Type::TransactSavings) {
             int user_id = distribution(generator);
             string key = "saving_" + to_string(user_id);
-            string value = s_kv_get(ctx, storage_client, key, endorsement);
+            string value = s_kv_get(*ctx, storage_client, key, endorsement);
             uint64_t balance;
             memcpy(&balance, value.c_str(), sizeof(uint64_t));
             balance += 1000;
@@ -607,7 +611,7 @@ void *simulation_handler(void *arg) {
         } else if (proposal.type == Request::Type::DepositChecking) {
             int user_id = distribution(generator);
             string key = "checking_" + to_string(user_id);
-            string value = s_kv_get(ctx, storage_client, key, endorsement);
+            string value = s_kv_get(*ctx, storage_client, key, endorsement);
             uint64_t balance;
             memcpy(&balance, value.c_str(), sizeof(uint64_t));
             balance += 1000;
@@ -620,8 +624,8 @@ void *simulation_handler(void *arg) {
             string sender_key = "checking_" + to_string(sender_id);
             string receiver_key = "checking_" + to_string(receiver_id);
 
-            string sender_value = s_kv_get(ctx, storage_client, sender_key, endorsement);
-            string receiver_value = s_kv_get(ctx, storage_client, receiver_key, endorsement);
+            string sender_value = s_kv_get(*ctx, storage_client, sender_key, endorsement);
+            string receiver_value = s_kv_get(*ctx, storage_client, receiver_key, endorsement);
             uint64_t sender_balance, receiver_balance;
             memcpy(&sender_balance, sender_value.c_str(), sizeof(uint64_t));
             memcpy(&receiver_balance, receiver_value.c_str(), sizeof(uint64_t));
@@ -636,7 +640,7 @@ void *simulation_handler(void *arg) {
         } else if (proposal.type == Request::Type::WriteCheck) {
             int user_id = distribution(generator);
             string key = "checking_" + to_string(user_id);
-            string value = s_kv_get(ctx, storage_client, key, endorsement);
+            string value = s_kv_get(*ctx, storage_client, key, endorsement);
             uint64_t balance;
             memcpy(&balance, value.c_str(), sizeof(uint64_t));
             if (balance >= 100) {
@@ -649,8 +653,8 @@ void *simulation_handler(void *arg) {
             string checking_key = "checking_" + to_string(user_id);
             string saving_key = "saving_" + to_string(user_id);
 
-            string checking_value = s_kv_get(ctx, storage_client, checking_key, endorsement);
-            string saving_value = s_kv_get(ctx, storage_client, saving_key, endorsement);
+            string checking_value = s_kv_get(*ctx, storage_client, checking_key, endorsement);
+            string saving_value = s_kv_get(*ctx, storage_client, saving_key, endorsement);
             uint64_t checking_balance, saving_balance;
             memcpy(&checking_balance, checking_value.c_str(), sizeof(uint64_t));
             memcpy(&saving_balance, saving_value.c_str(), sizeof(uint64_t));
@@ -665,8 +669,8 @@ void *simulation_handler(void *arg) {
             string checking_key = "checking_" + to_string(user_id);
             string saving_key = "saving_" + to_string(user_id);
 
-            string checking_value = s_kv_get(ctx, storage_client, checking_key, endorsement);
-            string saving_value = s_kv_get(ctx, storage_client, saving_key, endorsement);
+            string checking_value = s_kv_get(*ctx, storage_client, checking_key, endorsement);
+            string saving_value = s_kv_get(*ctx, storage_client, saving_key, endorsement);
             // log_info(stderr, "[R]Query: user_id = %d.", user_id);
         }
 
@@ -684,6 +688,9 @@ void *simulation_handler(void *arg) {
         // }
 
         // total_ops++;
+        if (ctx->end_flag) {
+            log_info(stderr, "thread_index = %d: end_flag is %d", ctx->thread_index,ctx->end_flag);   
+        }
     }
     free(buf);
     return NULL;
@@ -754,7 +761,7 @@ bool validate_transaction(struct ThreadContext &ctx, KVStableClient &storage_cli
 }
 
 void *validation_handler(void *arg) {
-    struct ThreadContext ctx = *(struct ThreadContext *)arg;
+    struct ThreadContext *ctx = (struct ThreadContext *)arg;
     /* set up grpc client for storage server */
     KVStableClient storage_client(storage_channel_ptr);
     string serialised_block;
@@ -764,7 +771,7 @@ void *validation_handler(void *arg) {
         compute_clients.emplace_back(compute_channel_ptrs[i]);
     }
 
-    while (!end_flag) {
+    while (!ctx->end_flag) {
         sem_wait(&bq.full);
         pthread_mutex_lock(&bq.mutex);
         Block block = bq.bq_queue.front();
@@ -773,7 +780,7 @@ void *validation_handler(void *arg) {
         pthread_mutex_unlock(&bq.mutex);
 
         for (int trans_id = 0; trans_id < block.transactions_size(); trans_id++) {
-            validate_transaction(ctx, storage_client, compute_clients, block.block_id(), trans_id, block.transactions(trans_id));
+            validate_transaction(*ctx, storage_client, compute_clients, block.block_id(), trans_id, block.transactions(trans_id));
         }
 
         /* store the block with its bit mask in remote block store */
@@ -943,6 +950,427 @@ class ComputeCommImpl final : public ComputeComm::Service {
     }
 };
 
+class CoreManager {
+    private:
+        // Track active cores
+        std::vector<int> active_cores;
+        
+        // Map core_id to its simulation and validation threads
+        std::unordered_map<int, std::vector<pthread_t>> sim_threads_by_core;
+        std::unordered_map<int, std::vector<pthread_t>> val_threads_by_core;
+        
+        // Communication components pool
+        std::vector<ThreadContext> thread_contexts;
+        std::vector<bool> context_in_use;
+        std::unordered_map<pthread_t, int> thread_to_context_index;
+        
+        // Configuration
+        int sim_threads_per_core;
+        int val_threads_per_core;
+        int max_available_threads;
+        
+        // Thread synchronization
+        std::mutex core_mutex;
+        
+        // 创建并启动线程
+        pthread_t create_thread(int core_id, bool is_simulation, int thread_index) {
+            pthread_t tid;
+            
+            // 查找可用上下文
+            int context_index = -1;
+            for (size_t i = 0; i < context_in_use.size(); i++) {
+                if (!context_in_use[i]) {
+                    context_index = i;
+                    context_in_use[i] = true;
+                    break;
+                }
+            }
+            
+            if (context_index == -1) {
+                std::cerr << "No available thread context!" << std::endl;
+                return 0;
+            }
+            
+            // 初始化线程上下文
+            ThreadContext* ctx = &thread_contexts[context_index];
+            ctx->thread_index = thread_index;
+            ctx->end_flag = 0;  // 初始化为不终止
+            
+            if (is_simulation) {
+                pthread_create(&tid, NULL, simulation_handler, ctx);
+            } else {
+                pthread_create(&tid, NULL, validation_handler, ctx);
+            }
+            
+            // 设置CPU亲和性
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(core_id, &cpuset);
+            int ret = pthread_setaffinity_np(tid, sizeof(cpu_set_t), &cpuset);
+            if (ret) {
+                std::cerr << "pthread_setaffinity_np failed with: " 
+                        << strerror(ret) << std::endl;
+            }
+            
+            // 记录线程ID到上下文索引的映射
+            thread_to_context_index[tid] = context_index;
+            
+            return tid;
+        }
+    
+        // 优雅地停止线程
+        void stop_thread(pthread_t tid) {
+            // 查找线程的上下文
+            auto it = thread_to_context_index.find(tid);
+            if (it == thread_to_context_index.end()) {
+                std::cerr << "Thread ID not found in mapping!" << std::endl;
+                return;
+            }
+            
+            int context_index = it->second;
+            
+            // 标记线程应当终止
+            thread_contexts[context_index].end_flag = 1;
+            
+            // 等待线程完成
+            log_info(stderr, "Waiting for thread %lu to finish..., context index is %d", tid, thread_contexts[context_index].thread_index);
+            pthread_join(tid, NULL);
+            log_info(stderr, "Thread %lu has finished...", tid);
+
+            
+            // 释放上下文和映射
+            context_in_use[context_index] = false;
+            thread_to_context_index.erase(tid);
+        }
+    
+    public:
+        CoreManager(int sim_per_core, int val_per_core, int max_threads) : 
+            sim_threads_per_core(sim_per_core), 
+            val_threads_per_core(val_per_core),
+            max_available_threads(max_threads) {
+            
+            // Initialize thread contexts pool
+            thread_contexts.resize(max_threads);
+            context_in_use.resize(max_threads, false);
+            
+            // Set up communication components for each context
+            for (int i = 0; i < max_threads; i++) {
+                // Initialize QP and CQ for each context
+                // This would be implementation-specific based on your RDMA setup
+                thread_contexts[i].thread_index = i;
+                thread_contexts[i].m_qp = c_ib_info.qp[i];
+                thread_contexts[i].m_cq = c_ib_info.cq[i];
+                // log_info(stderr, "thread_context[%d]: m_qp = %p, m_cq = %p", i, thread_contexts[i].m_qp, thread_contexts[i].m_cq);
+                assert(thread_contexts[i].m_qp != NULL);
+                assert(thread_contexts[i].m_cq != NULL);
+            }
+        }
+        
+        ~CoreManager() {
+            // Clean up all active cores
+            std::vector<int> cores_to_remove = active_cores;
+            for (int core_id : cores_to_remove) {
+                remove_core(core_id);
+            }
+        }
+    
+        // 初始化特定数量的核心
+        void initialize(int num_cores, const std::vector<int>& core_ids = {}) {
+            // 如果没有提供特定核心ID，则使用0到num_cores-1
+            std::vector<int> cores_to_add;
+            if (core_ids.empty()) {
+                for (int i = 0; i < num_cores; i++) {
+                    cores_to_add.push_back(i);
+                }
+            } else {
+                // 使用提供的核心IDs
+                cores_to_add = core_ids;
+                if (cores_to_add.size() != num_cores) {
+                    std::cerr << "Warning: core_ids size doesn't match num_cores" << std::endl;
+                }
+            }
+            
+            // 添加每个核心
+            for (int core_id : cores_to_add) {
+                if (add_core(core_id) != 0) {
+                    std::cerr << "Failed to add core " << core_id << std::endl;
+                }
+            }
+        }
+        
+        // 初始化具有特定线程配置的核心
+        void initialize_with_config(int num_cores, 
+                                   int sim_threads, 
+                                   int val_threads, 
+                                   const std::vector<int>& core_ids = {}) {
+            // 临时保存原配置
+            int original_sim = sim_threads_per_core;
+            int original_val = val_threads_per_core;
+            
+            // 设置新配置
+            sim_threads_per_core = sim_threads;
+            val_threads_per_core = val_threads;
+            
+            // 初始化核心
+            initialize(num_cores, core_ids);
+            
+            // 恢复原配置（如果有必要的话）
+            sim_threads_per_core = original_sim;
+            val_threads_per_core = original_val;
+        }
+    
+        // Get current number of cores
+        int get_core_count() {
+            std::lock_guard<std::mutex> lock(core_mutex);
+            return active_cores.size();
+        }
+        
+        // Get current threads per core
+        std::pair<int, int> get_threads_per_core() {
+            std::lock_guard<std::mutex> lock(core_mutex);
+            return {sim_threads_per_core, val_threads_per_core};
+        }
+        
+        // Get maximum available threads
+        int get_max_threads() {
+            return max_available_threads;
+        }
+
+        // 添加单个验证线程到指定核心
+        int add_validation_thread(int core_id) {
+            std::lock_guard<std::mutex> lock(core_mutex);
+            
+            // 检查核心是否已经激活
+            auto it = std::find(active_cores.begin(), active_cores.end(), core_id);
+            if (it == active_cores.end()) {
+                // 如果核心不在活动列表中，我们需要先添加它
+                std::cerr << "Core " << core_id << " is not active, activating it first." << std::endl;
+                active_cores.push_back(core_id);
+                sim_threads_by_core[core_id] = std::vector<pthread_t>();
+                val_threads_by_core[core_id] = std::vector<pthread_t>();
+            }
+            
+            // 检查是否有足够的线程上下文可用
+            int current_total_threads = 0;
+            for (int core : active_cores) {
+                current_total_threads += sim_threads_by_core[core].size() + val_threads_by_core[core].size();
+            }
+            
+            if (current_total_threads + 1 > max_available_threads) {
+                std::cerr << "Not enough thread contexts available!" << std::endl;
+                return -1;
+            }
+            
+            // 创建新的验证线程
+            int thread_index = current_total_threads;
+            pthread_t tid = create_thread(core_id, false, thread_index);
+            if (tid == 0) {
+                std::cerr << "Failed to create validation thread!" << std::endl;
+                return -2;
+            }
+            
+            // 添加到该核心的验证线程列表
+            val_threads_by_core[core_id].push_back(tid);
+            
+            log_info(stderr, "Added validation thread %lu to core %d", tid, core_id);
+            return 0; // 成功
+        }
+        
+        // Add a core with the current thread distribution
+        int add_core(int core_id) {
+            std::lock_guard<std::mutex> lock(core_mutex);
+
+            
+            // Check if the core is already active
+            if (std::find(active_cores.begin(), active_cores.end(), core_id) != active_cores.end()) {
+                std::cerr << "Core " << core_id << " is already active!" << std::endl;
+                return -1;
+            }
+            
+
+
+            // Check if we have enough threads available
+            int total_threads_needed = sim_threads_per_core + val_threads_per_core;
+            int current_total_threads = 0;
+            for (int core : active_cores) {
+                current_total_threads += sim_threads_by_core[core].size() + val_threads_by_core[core].size();
+            }
+            
+            if (current_total_threads + total_threads_needed > max_available_threads) {
+                std::cerr << "Not enough thread contexts available!" << std::endl;
+                return -2;
+            }
+
+
+            
+            // Add the core to active cores
+            active_cores.push_back(core_id);
+            log_info(stderr, "Adding core %d with %d simulation threads and %d validation threads.\n", 
+                     core_id, sim_threads_per_core, val_threads_per_core);
+            // Create simulation threads
+            std::vector<pthread_t> sim_tids;
+            for (int i = 0; i < sim_threads_per_core; i++) {
+                pthread_t tid = create_thread(core_id, true, current_total_threads + i);
+                sim_tids.push_back(tid);
+            }
+            sim_threads_by_core[core_id] = sim_tids;
+
+
+            
+            // Create validation threads
+            std::vector<pthread_t> val_tids;
+            for (int i = 0; i < val_threads_per_core; i++) {
+                pthread_t tid = create_thread(core_id, false, 
+                                              current_total_threads + sim_threads_per_core + i);
+                val_tids.push_back(tid);
+            }
+            val_threads_by_core[core_id] = val_tids;
+            
+            return 0; // Success
+        }
+        
+        // Remove a core (defaults to last core if none specified)
+        int remove_core(int core_id = -1) {
+            std::lock_guard<std::mutex> lock(core_mutex);
+            
+            if (active_cores.empty()) {
+                std::cerr << "No active cores to remove!" << std::endl;
+                return -1;
+            }
+            
+            // If no core_id specified, remove the last core
+            if (core_id == -1) {
+                core_id = active_cores.back();
+            }
+            
+            // Check if core exists
+            auto it = std::find(active_cores.begin(), active_cores.end(), core_id);
+            if (it == active_cores.end()) {
+                std::cerr << "Core " << core_id << " is not active!" << std::endl;
+                return -2;
+            }
+
+            log_info(stderr, "Removing core %d\n", core_id);
+            
+            // Stop all simulation threads for this core
+            log_info(stderr, "size of sim_threads_by_core: %d", sim_threads_by_core[core_id].size());
+            for (pthread_t tid : sim_threads_by_core[core_id]) {
+                log_info(stderr, "Stopping simulation thread %lu\n", tid);
+                int ctx_index = thread_to_context_index[tid];
+                stop_thread(tid);
+            }
+
+            
+            // Stop all validation threads for this core
+            for (pthread_t tid : val_threads_by_core[core_id]) {
+                int ctx_index = thread_to_context_index[tid];
+                stop_thread(tid);
+                log_info(stderr, "Stopping validation thread %lu\n", tid);
+            }
+
+            
+            // Remove the core from active cores
+            active_cores.erase(it);
+            sim_threads_by_core.erase(core_id);
+            val_threads_by_core.erase(core_id);
+            
+            return 0; // Success
+        }
+        
+        // Adjust thread counts per core
+        int adjust_thread(int d_sim, int d_val) {
+            std::lock_guard<std::mutex> lock(core_mutex);
+            
+            int new_sim_count = sim_threads_per_core + d_sim;
+            int new_val_count = val_threads_per_core + d_val;
+
+            log_info(stderr, "test place 1");
+
+            
+            // Ensure at least one thread of each type
+            if (new_sim_count < 1 || new_val_count < 1) {
+                std::cerr << "Must have at least one thread of each type!" << std::endl;
+                return -1;
+            }
+            
+            // Check if we have enough threads available
+            int total_new_threads_per_core = new_sim_count + new_val_count;
+            int new_total_threads = total_new_threads_per_core * active_cores.size();
+            
+            if (new_total_threads > max_available_threads) {
+                std::cerr << "Not enough thread contexts available for adjustment!" << std::endl;
+                return -2;
+            }
+
+            log_info(stderr, "test place 2");
+
+            
+            // Process each core
+            for (int core_id : active_cores) {
+                // Handle simulation threads
+                if (d_sim > 0) {
+                    // Add simulation threads
+                    int current_sim_count = sim_threads_by_core[core_id].size();
+                    int sim_to_add = new_sim_count - current_sim_count;
+                    
+                    for (int i = 0; i < sim_to_add; i++) {
+                        log_info(stderr, "test place 3");
+
+                        pthread_t tid = create_thread(core_id, true, 
+                                                     current_sim_count + i);
+                        log_info(stderr, "test place 4");
+                        sim_threads_by_core[core_id].push_back(tid);
+                    }
+                } else if (d_sim < 0) {
+                    // Remove simulation threads
+                    int current_sim_count = sim_threads_by_core[core_id].size();
+                    int sim_to_remove = current_sim_count - new_sim_count;
+                    
+                    for (int i = 0; i < sim_to_remove; i++) {
+                        pthread_t tid = sim_threads_by_core[core_id].back();
+                        sim_threads_by_core[core_id].pop_back();
+                        
+                        int ctx_index = thread_to_context_index[tid];
+                        stop_thread(tid);
+                    }
+                }
+                
+                // Handle validation threads
+                if (d_val > 0) {
+                    // Add validation threads
+                    int current_val_count = val_threads_by_core[core_id].size();
+                    int val_to_add = new_val_count - current_val_count;
+                    
+                    for (int i = 0; i < val_to_add; i++) {
+                        pthread_t tid = create_thread(core_id, false, 
+                                                     current_val_count + i);
+                        val_threads_by_core[core_id].push_back(tid);
+                    }
+                } else if (d_val < 0) {
+                    // Remove validation threads
+                    int current_val_count = val_threads_by_core[core_id].size();
+                    int val_to_remove = current_val_count - new_val_count;
+                    
+                    for (int i = 0; i < val_to_remove; i++) {
+                        pthread_t tid = val_threads_by_core[core_id].back();
+                        val_threads_by_core[core_id].pop_back();
+                        
+                        int ctx_index = thread_to_context_index[tid];
+                        stop_thread(tid);
+                    }
+                }
+            }
+            
+            log_info(stderr, "test place 5");
+            // Update thread counts
+            sim_threads_per_core = new_sim_count;
+            val_threads_per_core = new_val_count;
+            
+            return 0; // Success
+        }
+    
+    };
+
 void run_server(const string &server_address, bool is_validator) {
     //TODO 这里tg是根目录吗？
     std::filesystem::remove_all("../mydata/testdb");
@@ -988,38 +1416,50 @@ void run_server(const string &server_address, bool is_validator) {
     //     }
     // }
 
+    //=========================start worker threads=============================
     int num_threads = c_config_info.num_qps_per_server;
     int num_sim_threads = c_config_info.num_sim_threads;
-    pthread_t tid[num_threads];
-    struct ThreadContext *ctxs = (struct ThreadContext *)calloc(num_threads, sizeof(struct ThreadContext));
-    for (int i = 0; i < num_threads; i++) {
-        assert(c_ib_info.cq[i] != NULL);
-        assert(c_ib_info.qp[i] != NULL);
-        ctxs[i].thread_index = i;
-        ctxs[i].m_qp = c_ib_info.qp[i];
-        ctxs[i].m_cq = c_ib_info.cq[i];
-        if (i < num_sim_threads) {
-            pthread_create(&tid[i], NULL, simulation_handler, &ctxs[i]);
-        } else {
-            // pthread_create(&tid[i], NULL, parallel_validation_worker, &ctxs[i]);
-            pthread_create(&tid[i], NULL, validation_handler, &ctxs[i]);
-            log_info(stderr, "validation thread created.");
+    //TODO: HARD CODED
+    CoreManager core_manager(1, 0, num_threads);
+    // std::vector<int> specific_cores = {0}; 
+    core_manager.initialize(31);
+    core_manager.add_validation_thread(31);
+    // #region original initialization code
+    // pthread_t tid[num_threads];
+    // struct ThreadContext *ctxs = (struct ThreadContext *)calloc(num_threads, sizeof(struct ThreadContext));
+    // for (int i = 0; i < num_threads; i++) {
+    //     assert(c_ib_info.cq[i] != NULL);
+    //     assert(c_ib_info.qp[i] != NULL);
+    //     ctxs[i].thread_index = i;
+    //     ctxs[i].m_qp = c_ib_info.qp[i];
+    //     ctxs[i].m_cq = c_ib_info.cq[i];
+    //     if (i < num_sim_threads) {
+    //         pthread_create(&tid[i], NULL, simulation_handler, &ctxs[i]);
+    //     } else {
+    //         // pthread_create(&tid[i], NULL, parallel_validation_worker, &ctxs[i]);
+    //         pthread_create(&tid[i], NULL, validation_handler, &ctxs[i]);
+    //         log_info(stderr, "validation thread created.");
+    //     }
+    //     /* stick thread to a core for better performance */
+    //     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+    //     int core_id = i % num_cores;
+    //     cpu_set_t cpuset;
+    //     CPU_ZERO(&cpuset);
+    //     CPU_SET(core_id, &cpuset);
+    //     int ret = pthread_setaffinity_np(tid[i], sizeof(cpu_set_t), &cpuset);
+    //     if (ret) {
+    //         log_err("pthread_setaffinity_np failed with '%s'.", strerror(ret));
+    //     }
+    // }
+    //#endregion
 
-        }
-        /* stick thread to a core for better performance */
-        int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-        int core_id = i % num_cores;
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET(core_id, &cpuset);
-        int ret = pthread_setaffinity_np(tid[i], sizeof(cpu_set_t), &cpuset);
-        if (ret) {
-            log_err("pthread_setaffinity_np failed with '%s'.", strerror(ret));
-        }
-    }
+    //========================================================================
 
+
+    //===================initialize data and start client=====================
     /* microbenchmark logics */
     // test_get_only();
+    log_info(stderr, "prepopulate data...");
     prepopulate();
     if (is_validator) {
         for (int i = 0; i < compute_clients.size(); i++) {
@@ -1032,6 +1472,8 @@ void run_server(const string &server_address, bool is_validator) {
 
     //separate the client initialization
     start_client();
+    //=======================================================================
+
 
     //=========================statistics thread=============================
     pthread_t stat_tid;
@@ -1047,6 +1489,16 @@ void run_server(const string &server_address, bool is_validator) {
     pthread_detach(stat_tid);
     //=======================================================================
 
+    //=================threads number adjustment=============================
+    // sleep(10);
+    // core_manager.adjust_thread(-1, 0);
+    // sleep(10);
+    // core_manager.adjust_thread(1, 0);
+
+    // core_manager.remove_core(0);
+    //=======================================================================
+    
+
     /* output stats */
     void *status;
     // for (int i = 0; i < num_threads; i++) {
@@ -1056,7 +1508,7 @@ void run_server(const string &server_address, bool is_validator) {
     // pthread_join(validation_manager_tid, &status);
     pthread_join(bg_tid, &status);
 
-    free(ctxs);
+    // free(ctxs);
 }
 
 
