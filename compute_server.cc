@@ -1422,8 +1422,8 @@ void run_server(const string &server_address, bool is_validator) {
     //TODO: HARD CODED
     CoreManager core_manager(1, 0, num_threads);
     // std::vector<int> specific_cores = {0}; 
-    core_manager.initialize(31);
-    core_manager.add_validation_thread(31);
+    core_manager.initialize(15);
+    core_manager.add_validation_thread(15);
     // #region original initialization code
     // pthread_t tid[num_threads];
     // struct ThreadContext *ctxs = (struct ThreadContext *)calloc(num_threads, sizeof(struct ThreadContext));
