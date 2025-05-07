@@ -371,7 +371,6 @@ void prepopulate() {
 
     for (int i = YCSB_KEY_NUM; i >= 0; i--) {
         /* prepopulate - YSCB workload */
-        log_info(stderr, "prepopulate key_y_%d", i);
         struct Request req;
         req.type = Request::Type::PUT;
         req.key = "key_y_" + to_string(i);
