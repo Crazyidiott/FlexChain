@@ -391,7 +391,7 @@ void *client_thread(void *arg) {
 
 void *run_client(void *arg) {
     pthread_t client_tid;
-    // pthread_create(&client_tid, NULL, client_thread, NULL);
+    pthread_create(&client_tid, NULL, client_thread, NULL);
 
     while (!ready_flag)
         ;
