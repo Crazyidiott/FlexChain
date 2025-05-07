@@ -135,7 +135,8 @@ void *statistics_thread(void *arg) {
     read_all_cpu_stats(prev_stats, cpu_count);
 
     while (!end_flag) {
-        sleep(20);
+        long wait_seconds = 5;
+        sleep(wait_seconds);
 
         long current_ops = total_ops.load();
         long current_cache_hit = cache_hit.load();
@@ -153,11 +154,16 @@ void *statistics_thread(void *arg) {
             prev_stats[i] = curr_stats[i];
         }        
 
+        // log all info
+        // log_info(stderr,
+        //         "[Total] ops=%ld, aborts=%ld, cache_hit=%ld/%ld, sst_count=%ld | "
+        //         "[Interval] ops=%ld, cache_hit=%ld",
+        //         current_ops, abort_count.load(), current_cache_hit, cache_total.load(), sst_count.load(),
+        //         ops_diff, cache_hit_diff);
+
         log_info(stderr,
-                "[Total] ops=%ld, aborts=%ld, cache_hit=%ld/%ld, sst_count=%ld | "
-                "[Interval] ops=%ld, cache_hit=%ld",
-                current_ops, abort_count.load(), current_cache_hit, cache_total.load(), sst_count.load(),
-                ops_diff, cache_hit_diff);
+            "[Interval] ops=%ld, cache_hit=%ld, ops/s=%f",
+            ops_diff, cache_hit_diff, ops_diff * 1.0 / wait_seconds);
 
     }
     return NULL;
