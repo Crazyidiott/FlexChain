@@ -280,7 +280,7 @@ string get_balance_str(uint64_t balance, size_t length) {
 
 void *client_thread(void *arg) {
     int trans_per_interval = 500;
-    int interval = 5000;
+    int interval = 2500;
 
     default_random_engine generator;
     uniform_int_distribution<int> ycsb_distribution(0, YCSB_KEY_NUM - 1);
