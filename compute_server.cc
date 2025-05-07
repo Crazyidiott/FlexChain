@@ -495,7 +495,7 @@ void *simulation_handler(void *arg) {
     long local_ops = 0;
 
     pthread_t my_tid = pthread_self();
-    printf("My thread ID is %lu\n", (unsigned long)my_tid);
+    log_debug("My thread ID is %lu\n", (unsigned long)my_tid);
 
     while (!ctx->end_flag) {
         sem_wait(&rq.full);
@@ -688,9 +688,6 @@ void *simulation_handler(void *arg) {
         // }
 
         // total_ops++;
-        if (ctx->end_flag) {
-            log_info(stderr, "thread_index = %d: end_flag is %d", ctx->thread_index,ctx->end_flag);   
-        }
     }
     free(buf);
     return NULL;
@@ -1032,7 +1029,7 @@ class CoreManager {
             int context_index = it->second;
             
             // 记录实际的映射值和线程索引
-            log_info(stderr, "停止线程 %lu, 映射到 context_index %d, 线程索引 %d", 
+            log_debug(stderr, "stopping thread %lu, map to context_index %d, thread index %d", 
                      (unsigned long)tid, context_index, thread_contexts[context_index].thread_index);
             
             // 标记线程应当终止
@@ -1040,7 +1037,7 @@ class CoreManager {
             
             // 等待线程完成
             pthread_join(tid, NULL);
-            log_info(stderr, "线程 %lu 已完成", (unsigned long)tid);
+            log_info(stderr, "thread %lu stopped", (unsigned long)tid);
             
             // 释放上下文和映射
             context_in_use[context_index] = false;
@@ -1286,9 +1283,6 @@ class CoreManager {
             int new_sim_count = sim_threads_per_core + d_sim;
             int new_val_count = val_threads_per_core + d_val;
 
-            log_info(stderr, "new_sim_");
-
-            
             // Ensure at least one thread of each type
             if (new_sim_count < 1) {
                 std::cerr << "Must have at least one simulation thread!" << std::endl;
@@ -1327,7 +1321,7 @@ class CoreManager {
                         auto it = thread_to_context_index.find(tid);
 
                         if (it != thread_to_context_index.end()) {
-                            log_info(stderr, "线程 %lu 映射到 context_index %d", (unsigned long)tid, it->second);
+                            // log_info(stderr, "thread %lu map to context_index %d", (unsigned long)tid, it->second);
                         } else {
                             log_err("找不到线程 %lu 的映射", (unsigned long)tid);
                         }
@@ -1421,8 +1415,8 @@ void run_server(const string &server_address, bool is_validator) {
     //TODO: HARD CODED
     CoreManager core_manager(2, 0, num_threads);
     // std::vector<int> specific_cores = {0}; 
-    core_manager.initialize(7);
-    core_manager.add_validation_thread(15);
+    core_manager.initialize(1,{0});
+    core_manager.add_validation_thread(0);
     // #region original initialization code
     // pthread_t tid[num_threads];
     // struct ThreadContext *ctxs = (struct ThreadContext *)calloc(num_threads, sizeof(struct ThreadContext));
@@ -1490,9 +1484,45 @@ void run_server(const string &server_address, bool is_validator) {
 
     //=================threads number adjustment=============================
     sleep(60);
+    log_info(stderr,"================removing one thread================\n");
     core_manager.adjust_thread(-1, 0);
+
     sleep(60);
-    core_manager.adjust_thread(1, 0);
+
+    log_info(stderr,"================adding one core================\n");
+    core_manager.add_core(1);
+
+    sleep(60);
+
+
+    log_info(stderr,"================adding one core================\n");
+    core_manager.add_core(2);
+
+    sleep(30);
+
+    log_info(stderr,"================adding one core================\n");
+    core_manager.add_core(3);
+    core_manager.add_core(4);
+    core_manager.add_core(5);
+    core_manager.add_core(6);
+    core_manager.add_core(7);
+    core_manager.add_core(8);
+    core_manager.add_core(9);
+    core_manager.add_core(10);
+    core_manager.add_core(11);
+    core_manager.add_core(12);
+    core_manager.add_core(13);
+    core_manager.add_core(14);
+    
+    
+
+
+
+
+
+
+
+
 
     // core_manager.remove_core(0);
     //=======================================================================
