@@ -1001,7 +1001,9 @@ class CoreManager {
             } else {
                 pthread_create(&tid, NULL, validation_handler, ctx);
             }
-            
+
+            log_info(stderr, "tid is: %lu, context_id is %d", tid, context_index);
+
             // 设置CPU亲和性
             cpu_set_t cpuset;
             CPU_ZERO(&cpuset);
@@ -1023,20 +1025,22 @@ class CoreManager {
             // 查找线程的上下文
             auto it = thread_to_context_index.find(tid);
             if (it == thread_to_context_index.end()) {
-                std::cerr << "Thread ID not found in mapping!" << std::endl;
+                log_err("在映射中找不到线程 ID %lu！", (unsigned long)tid);
                 return;
             }
             
             int context_index = it->second;
             
+            // 记录实际的映射值和线程索引
+            log_info(stderr, "停止线程 %lu, 映射到 context_index %d, 线程索引 %d", 
+                     (unsigned long)tid, context_index, thread_contexts[context_index].thread_index);
+            
             // 标记线程应当终止
             thread_contexts[context_index].end_flag = 1;
             
             // 等待线程完成
-            log_info(stderr, "Waiting for thread %lu to finish..., context index is %d", tid, thread_contexts[context_index].thread_index);
             pthread_join(tid, NULL);
-            log_info(stderr, "Thread %lu has finished...", tid);
-
+            log_info(stderr, "线程 %lu 已完成", (unsigned long)tid);
             
             // 释放上下文和映射
             context_in_use[context_index] = false;
@@ -1284,12 +1288,12 @@ class CoreManager {
             int new_sim_count = sim_threads_per_core + d_sim;
             int new_val_count = val_threads_per_core + d_val;
 
-            log_info(stderr, "test place 1");
+            log_info(stderr, "new_sim_");
 
             
             // Ensure at least one thread of each type
-            if (new_sim_count < 1 || new_val_count < 1) {
-                std::cerr << "Must have at least one thread of each type!" << std::endl;
+            if (new_sim_count < 1) {
+                std::cerr << "Must have at least one simulation thread!" << std::endl;
                 return -1;
             }
             
@@ -1302,9 +1306,6 @@ class CoreManager {
                 return -2;
             }
 
-            log_info(stderr, "test place 2");
-
-            
             // Process each core
             for (int core_id : active_cores) {
                 // Handle simulation threads
@@ -1314,11 +1315,8 @@ class CoreManager {
                     int sim_to_add = new_sim_count - current_sim_count;
                     
                     for (int i = 0; i < sim_to_add; i++) {
-                        log_info(stderr, "test place 3");
-
                         pthread_t tid = create_thread(core_id, true, 
                                                      current_sim_count + i);
-                        log_info(stderr, "test place 4");
                         sim_threads_by_core[core_id].push_back(tid);
                     }
                 } else if (d_sim < 0) {
@@ -1329,7 +1327,13 @@ class CoreManager {
                     for (int i = 0; i < sim_to_remove; i++) {
                         pthread_t tid = sim_threads_by_core[core_id].back();
                         sim_threads_by_core[core_id].pop_back();
-                        
+                        auto it = thread_to_context_index.find(tid);
+
+                        if (it != thread_to_context_index.end()) {
+                            log_info(stderr, "线程 %lu 映射到 context_index %d", (unsigned long)tid, it->second);
+                        } else {
+                            log_err("找不到线程 %lu 的映射", (unsigned long)tid);
+                        }
                         int ctx_index = thread_to_context_index[tid];
                         stop_thread(tid);
                     }
@@ -1361,7 +1365,6 @@ class CoreManager {
                 }
             }
             
-            log_info(stderr, "test place 5");
             // Update thread counts
             sim_threads_per_core = new_sim_count;
             val_threads_per_core = new_val_count;
@@ -1422,7 +1425,7 @@ void run_server(const string &server_address, bool is_validator) {
     //TODO: HARD CODED
     CoreManager core_manager(1, 0, num_threads);
     // std::vector<int> specific_cores = {0}; 
-    core_manager.initialize(15);
+    core_manager.initialize(7);
     core_manager.add_validation_thread(15);
     // #region original initialization code
     // pthread_t tid[num_threads];
@@ -1490,10 +1493,10 @@ void run_server(const string &server_address, bool is_validator) {
     //=======================================================================
 
     //=================threads number adjustment=============================
-    // sleep(10);
-    // core_manager.adjust_thread(-1, 0);
-    // sleep(10);
-    // core_manager.adjust_thread(1, 0);
+    sleep(30);
+    core_manager.adjust_thread(1, 0);
+    sleep(30);
+    core_manager.adjust_thread(-1, 0);
 
     // core_manager.remove_core(0);
     //=======================================================================
