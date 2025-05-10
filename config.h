@@ -48,10 +48,12 @@ struct CConfigInfo {
     size_t ctrl_msg_size;
     size_t ctrl_buffer_size;
     size_t bg_msg_size;
+    size_t eviction_threshold;
     uint16_t sock_port;
     string sock_addr;
     string storage_grpc_endpoint;
     string orderer_grpc_endpoint;
+    string memory_config_grpc_endpoint;
 };
 
 #endif
