@@ -1723,7 +1723,7 @@ int main(int argc, char *argv[]) {
             c_config_info.storage_grpc_endpoint = tmp[1];
         } else if (tmp[0] == "orderer_grpc_endpoint") {
             c_config_info.orderer_grpc_endpoint = tmp[1];
-        } else if (tmp[0] == "eviction_threshold") {
+        } else if (tmp[0] == "evict_threshold") {
             sstream >> c_config_info.eviction_threshold;
         } else if (tmp[0] == "compute_server_grpc_endpoint") {
             if (is_validator) {
