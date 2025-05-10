@@ -1623,34 +1623,6 @@ void ComputeCommClient::start_benchmarking() {
     Status status = stub_->start_benchmarking(&context, notifiction, &rsp);
 }
 
-bool MemoryConfigClient::SetEvictThreshold(uint32_t threshold, uint32_t& new_threshold) {
-    ClientContext context;
-    EvictThresholdRequest request;
-    EvictThresholdResponse response;
-    
-    request.set_threshold(threshold);
-    Status status = stub_->SetEvictThreshold(&context, request, &response);
-    
-    if (status.ok() && response.success()) {
-        new_threshold = response.threshold();
-        return true;
-    }
-    return false;
-}
-
-bool MemoryConfigClient::GetEvictThreshold(uint32_t& threshold) {
-    ClientContext context;
-    GetEvictThresholdRequest request;
-    EvictThresholdResponse response;
-    
-    Status status = stub_->GetEvictThreshold(&context, request, &response);
-    
-    if (status.ok() && response.success()) {
-        threshold = response.threshold();
-        return true;
-    }
-    return false;
-}
 
 int main(int argc, char *argv[]) {
     /* set config info */

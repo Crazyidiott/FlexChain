@@ -13,6 +13,37 @@ typedef struct {
     unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
 } cpu_stats_t;
 
+
+bool MemoryConfigClient::SetEvictThreshold(uint32_t threshold, uint32_t& new_threshold) {
+    ClientContext context;
+    EvictThresholdRequest request;
+    EvictThresholdResponse response;
+    
+    request.set_threshold(threshold);
+    Status status = stub_->SetEvictThreshold(&context, request, &response);
+    
+    if (status.ok() && response.success()) {
+        new_threshold = response.threshold();
+        return true;
+    }
+    return false;
+}
+
+bool MemoryConfigClient::GetEvictThreshold(uint32_t& threshold) {
+    ClientContext context;
+    GetEvictThresholdRequest request;
+    EvictThresholdResponse response;
+    
+    Status status = stub_->GetEvictThreshold(&context, request, &response);
+    
+    if (status.ok() && response.success()) {
+        threshold = response.threshold();
+        return true;
+    }
+    return false;
+}
+
+
 // 获取CPU核心数
 int get_cpu_count() {
     FILE *fp = fopen("/proc/stat", "r");
@@ -160,6 +191,20 @@ void *statistics_thread(void *arg) {
         //         "[Interval] ops=%ld, cache_hit=%ld",
         //         current_ops, abort_count.load(), current_cache_hit, cache_total.load(), sst_count.load(),
         //         ops_diff, cache_hit_diff);
+
+        MemoryConfigClient config_client(memory_config_channel);
+    
+        // 获取当前阈值
+        uint32_t current_threshold;
+        if (config_client.GetEvictThreshold(current_threshold)) {
+            log_info(stderr, "Current EVICT_THR: %u", current_threshold);
+        }
+        
+        // 设置新阈值
+        uint32_t new_threshold;
+        if (config_client.SetEvictThreshold(200, new_threshold)) {
+            log_info(stderr, "Updated EVICT_THR to: %u", new_threshold);
+        }
 
         log_info(stderr,
             "[Interval] ops=%ld, cache_hit=%ld, ops/s=%f",

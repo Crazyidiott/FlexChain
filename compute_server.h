@@ -29,8 +29,7 @@
 
 #include "blockchain.grpc.pb.h"
 #include "storage.grpc.pb.h"
-#include "memory_config.pb.h"
-#include "memory_config.grpc.pb.h"
+
 
 using namespace std;
 using grpc::Channel;
@@ -94,20 +93,6 @@ class MetaDataCache {
     }
 };
 
-class MemoryConfigClient {
-    public:
-        MemoryConfigClient(std::shared_ptr<Channel> channel)
-            : stub_(MemoryConfig::NewStub(channel)) {}
-    
-        // 设置驱逐阈值
-        bool SetEvictThreshold(uint32_t threshold, uint32_t& new_threshold);
-        
-        // 获取当前驱逐阈值
-        bool GetEvictThreshold(uint32_t& threshold);
-    
-    private:
-        std::unique_ptr<MemoryConfig::Stub> stub_;
-};
 
 class KVStableClient {
    public:
