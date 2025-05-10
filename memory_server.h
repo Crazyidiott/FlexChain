@@ -21,13 +21,30 @@
 #include <sstream>
 
 #include "storage.grpc.pb.h"
+#include "memory_config.grpc.pb.h"
 
-#define EVICT_THR 100
+// 移除宏定义
+// #define EVICT_THR 100
+extern uint32_t EVICT_THR;
+extern pthread_mutex_t evict_thr_mutex;
 
 using namespace std;
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
+
+// 添加新的MemoryConfigService服务类
+class MemoryConfigServiceImpl final : public MemoryConfig::Service {
+    public:
+        Status SetEvictThreshold(ServerContext* context, const EvictThresholdRequest* request,
+                                 EvictThresholdResponse* response) override;
+        
+        Status GetEvictThreshold(ServerContext* context, const GetEvictThresholdRequest* request,
+                                 EvictThresholdResponse* response) override;
+};
+    
+// 添加线程函数声明
+void* config_service_thread(void* arg);
 
 struct EntryHeader {
     uint64_t ptr_next;

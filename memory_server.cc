@@ -16,6 +16,44 @@ unordered_map<string, struct EntryHeader> key_to_addr;
 shared_ptr<grpc::Channel> channel_ptr;
 pthread_mutex_t logger_lock;
 
+uint32_t EVICT_THR = 100; // 默认值
+pthread_mutex_t evict_thr_mutex;
+std::unique_ptr<Server> config_server;
+
+// 实现MemoryConfigServiceImpl类的方法
+Status MemoryConfigServiceImpl::SetEvictThreshold(ServerContext* context, const EvictThresholdRequest* request, EvictThresholdResponse* response) {
+    pthread_mutex_lock(&evict_thr_mutex);
+    EVICT_THR = request->threshold();
+    response->set_threshold(EVICT_THR);
+    response->set_success(true);
+    log_info(stderr, "Setting EVICT_THR to %u", EVICT_THR);
+    pthread_mutex_unlock(&evict_thr_mutex);
+    return Status::OK;
+}
+
+Status MemoryConfigServiceImpl::GetEvictThreshold(ServerContext* context, const GetEvictThresholdRequest* request, EvictThresholdResponse* response) {
+    pthread_mutex_lock(&evict_thr_mutex);
+    response->set_threshold(EVICT_THR);
+    response->set_success(true);
+    pthread_mutex_unlock(&evict_thr_mutex);
+    return Status::OK;
+}
+
+// 配置服务线程函数
+void* config_service_thread(void* arg) {
+    string server_address = *(string*)arg;
+    MemoryConfigServiceImpl service;
+
+    ServerBuilder builder;
+    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.RegisterService(&service);
+    config_server = builder.BuildAndStart();
+    log_info(stderr, "Memory config service listening on %s", server_address.c_str());
+
+    config_server->Wait();
+    return NULL;
+}
+
 void *space_manager(void *arg) {
     while (true) {
         sem_wait(&space_manager_rq.full);
@@ -30,7 +68,11 @@ void *space_manager(void *arg) {
         uint64_t free_addr = (uintptr_t)space_allocator.free_addrs.front();
         space_allocator.free_addrs.pop();
         /* trigger buffer eviction in remote memory pool */
-        if (space_allocator.free_addrs.size() < EVICT_THR) {
+        pthread_mutex_lock(&evict_thr_mutex);
+        size_t current_evict_thr = EVICT_THR;  // 读取当前值
+        pthread_mutex_unlock(&evict_thr_mutex);
+
+        if (space_allocator.free_addrs.size() < current_evict_thr) {
             pthread_cond_signal(&space_allocator.cv_below);
         }
         pthread_mutex_unlock(&space_allocator.lock);
@@ -56,8 +98,15 @@ void *eviction_manager(void *arg) {
 
     while (true) {
         pthread_mutex_lock(&space_allocator.lock);
-        while (space_allocator.free_addrs.size() >= EVICT_THR) {
+        pthread_mutex_lock(&evict_thr_mutex);
+        size_t current_evict_thr = EVICT_THR;  // 读取当前值
+        pthread_mutex_unlock(&evict_thr_mutex);
+
+        while (space_allocator.free_addrs.size() >= current_evict_thr) {
             pthread_cond_wait(&space_allocator.cv_below, &space_allocator.lock);
+            pthread_mutex_lock(&evict_thr_mutex);
+            current_evict_thr = EVICT_THR;
+            pthread_mutex_unlock(&evict_thr_mutex);
         }
         pthread_mutex_unlock(&space_allocator.lock);
 
@@ -483,7 +532,8 @@ int main(int argc, char *argv[]) {
     m_config_info.bg_msg_size = 4 * 1024;                   // 4KB, maximum size of background message
     m_config_info.sock_port = 4711;                         // socket port used by memory server to init RDMA connection
     m_config_info.grpc_endpoint = "localhost:50051";        // address:port of the grpc server
-
+    m_config_info.config_grpc_endpoint = "localhost:50054";   // address:port for the memory config service
+    
     int opt;
     string configfile = "config/memory.config";
     while ((opt = getopt(argc, argv, "hc:")) != -1) {
@@ -525,7 +575,11 @@ int main(int argc, char *argv[]) {
             sstream >> m_config_info.sock_port;
         } else if (tmp[0] == "grpc_endpoint") {
             m_config_info.grpc_endpoint = tmp[1];
-        } else {
+        } else if (tmp[0] == "config_grpc_endpoint") {
+            config_grpc_endpoint = tmp[1];
+        } else if (tmp[0] == "evict_threshold") {
+            sstream >> EVICT_THR;
+        }  else {
             fprintf(stderr, "Invalid config parameter `%s`.\n", tmp[0].c_str());
             exit(1);
         }
@@ -535,9 +589,15 @@ int main(int argc, char *argv[]) {
 
     /* init logger */
     pthread_mutex_init(&logger_lock, NULL);
+    pthread_mutex_init(&evict_thr_mutex, NULL);
 
     /* set up grpc channel */
     channel_ptr = grpc::CreateChannel(m_config_info.grpc_endpoint, grpc::InsecureChannelCredentials());
+
+    /* start config service thread */
+    pthread_t config_tid;
+    pthread_create(&config_tid, NULL, config_service_thread, &config_grpc_endpoint);
+    pthread_detach(config_tid);
 
     /* set up RDMA connection with compute servers */
     memory_setup_ib(m_config_info, m_ib_info);

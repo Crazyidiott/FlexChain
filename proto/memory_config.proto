@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+service MemoryConfig {
+  // 设置EVICT_THR的值，返回修改后的值
+  rpc SetEvictThreshold(EvictThresholdRequest) returns (EvictThresholdResponse) {}
+  
+  // 获取当前EVICT_THR的值
+  rpc GetEvictThreshold(GetEvictThresholdRequest) returns (EvictThresholdResponse) {}
+}
+
+message EvictThresholdRequest {
+  uint32 threshold = 1;
+}
+
+message GetEvictThresholdRequest {
+  // 空请求
+}
+
+message EvictThresholdResponse {
+  uint32 threshold = 1;
+  bool success = 2;
+}

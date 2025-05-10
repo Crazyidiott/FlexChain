@@ -21,6 +21,7 @@ DataCache datacache;
 MetaDataCache metadatacache;
 shared_ptr<grpc::Channel> storage_channel_ptr;
 shared_ptr<grpc::Channel> orderer_channel_ptr;
+shared_ptr<grpc::Channel> memory_config_channel_ptr;
 vector<shared_ptr<grpc::Channel>> compute_channel_ptrs;
 pthread_mutex_t logger_lock;
 FILE *logger_fp;
@@ -1622,6 +1623,35 @@ void ComputeCommClient::start_benchmarking() {
     Status status = stub_->start_benchmarking(&context, notifiction, &rsp);
 }
 
+bool MemoryConfigClient::SetEvictThreshold(uint32_t threshold, uint32_t& new_threshold) {
+    ClientContext context;
+    EvictThresholdRequest request;
+    EvictThresholdResponse response;
+    
+    request.set_threshold(threshold);
+    Status status = stub_->SetEvictThreshold(&context, request, &response);
+    
+    if (status.ok() && response.success()) {
+        new_threshold = response.threshold();
+        return true;
+    }
+    return false;
+}
+
+bool MemoryConfigClient::GetEvictThreshold(uint32_t& threshold) {
+    ClientContext context;
+    GetEvictThresholdRequest request;
+    EvictThresholdResponse response;
+    
+    Status status = stub_->GetEvictThreshold(&context, request, &response);
+    
+    if (status.ok() && response.success()) {
+        threshold = response.threshold();
+        return true;
+    }
+    return false;
+}
+
 int main(int argc, char *argv[]) {
     /* set config info */
     c_config_info.num_qps_per_server = 64;
@@ -1632,6 +1662,7 @@ int main(int argc, char *argv[]) {
     c_config_info.bg_msg_size = 4 * 1024;              // 4KB, maximum size of background message
     c_config_info.sock_port = 4711;                    // socket port used by memory server to init RDMA connection
     c_config_info.sock_addr = "127.0.0.1";             // ip address of memory server
+    c_config_info.memory_config_grpc_endpoint = "localhost:50054"; // grpc endpoint of memory config server
 
     bool is_validator = false;
     int opt;
@@ -1696,6 +1727,8 @@ int main(int argc, char *argv[]) {
             if (is_validator) {
                 compute_channel_ptrs.push_back(grpc::CreateChannel(tmp[1], grpc::InsecureChannelCredentials()));
             }
+        } else if(tmp[0] == "memory_config_grpc_endpoint") {
+            c_config_info.memory_config_grpc_endpoint = tmp[1];
         } else {
             fprintf(stderr, "Invalid config parameter `%s`.\n", tmp[0].c_str());
             exit(1);
@@ -1711,9 +1744,28 @@ int main(int argc, char *argv[]) {
     /* set up grpc channels */
     storage_channel_ptr = grpc::CreateChannel(c_config_info.storage_grpc_endpoint, grpc::InsecureChannelCredentials());
     orderer_channel_ptr = grpc::CreateChannel(c_config_info.orderer_grpc_endpoint, grpc::InsecureChannelCredentials());
-
+    memory_config_channel_ptr = grpc::CreateChannel(c_config_info.memory_config_grpc_endpoint, grpc::InsecureChannelCredentials());
     /* set up RDMA connection with the memory server */
     compute_setup_ib(c_config_info, c_ib_info);
 
     run_server(server_address, is_validator);
+}
+
+void example_of_using_memory_config_client() {
+    // 创建到内存服务器的配置通道
+    auto config_channel = grpc::CreateChannel("memory_server_address:50052", 
+                                              grpc::InsecureChannelCredentials());
+    MemoryConfigClient config_client(config_channel);
+    
+    // 获取当前阈值
+    uint32_t current_threshold;
+    if (config_client.GetEvictThreshold(current_threshold)) {
+        log_info(stderr, "Current EVICT_THR: %u", current_threshold);
+    }
+    
+    // 设置新阈值
+    uint32_t new_threshold;
+    if (config_client.SetEvictThreshold(200, new_threshold)) {
+        log_info(stderr, "Updated EVICT_THR to: %u", new_threshold);
+    }
 }
