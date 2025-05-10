@@ -21,6 +21,20 @@ add_library(setup_ib OBJECT setup_ib.cc)
 add_library(utils OBJECT utils.cc)
 add_library(statistics OBJECT statistics.cc)
 
+# 为 statistics 设置正确的包含路径和依赖库
+target_include_directories(statistics PRIVATE
+    ${Protobuf_INCLUDE_DIRS}
+    ${gRPC_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(statistics PRIVATE
+    proto-objects
+    gRPC::grpc++
+    gRPC::grpc++_reflection
+    protobuf::libprotobuf
+)
 
 add_executable(compute_server compute_server.cc $<TARGET_OBJECTS:benchmark> $<TARGET_OBJECTS:setup_ib> $<TARGET_OBJECTS:utils> $<TARGET_OBJECTS:statistics>)
 add_executable(memory_server memory_server.cc $<TARGET_OBJECTS:setup_ib> $<TARGET_OBJECTS:utils>)
