@@ -29,6 +29,8 @@
 
 #include "blockchain.grpc.pb.h"
 #include "storage.grpc.pb.h"
+#include "memory_config.pb.h"
+#include "memory_config.grpc.pb.h"
 
 using namespace std;
 using grpc::Channel;
