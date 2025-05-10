@@ -34,6 +34,7 @@ using grpc::ServerContext;
 using grpc::ServerReader;
 using grpc::Status;
 
+class MemoryConfigClient;
 
 void start_statistics_thread();
 void stop_statistics_thread();
