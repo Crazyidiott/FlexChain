@@ -532,7 +532,7 @@ int main(int argc, char *argv[]) {
     m_config_info.bg_msg_size = 4 * 1024;                   // 4KB, maximum size of background message
     m_config_info.sock_port = 4711;                         // socket port used by memory server to init RDMA connection
     m_config_info.grpc_endpoint = "localhost:50051";        // address:port of the grpc server
-    m_config_info.config_grpc_endpoint = "localhost:50054";   // address:port for the memory config service
+    m_config_info.memory_config_grpc_endpoint = "localhost:50054";   // address:port for the memory config service
     
     int opt;
     string configfile = "config/memory.config";
@@ -596,7 +596,7 @@ int main(int argc, char *argv[]) {
 
     /* start config service thread */
     pthread_t config_tid;
-    pthread_create(&config_tid, NULL, config_service_thread, &config_grpc_endpoint);
+    pthread_create(&config_tid, NULL, config_service_thread, &memory_config_grpc_endpoint);
     pthread_detach(config_tid);
 
     /* set up RDMA connection with compute servers */
