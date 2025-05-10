@@ -192,7 +192,7 @@ void *statistics_thread(void *arg) {
         //         current_ops, abort_count.load(), current_cache_hit, cache_total.load(), sst_count.load(),
         //         ops_diff, cache_hit_diff);
 
-        MemoryConfigClient config_client(memory_config_channel);
+        MemoryConfigClient config_client(memory_config_channel_ptr);
     
         // 获取当前阈值
         uint32_t current_threshold;

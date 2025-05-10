@@ -43,6 +43,7 @@ extern std::atomic<long> abort_count;
 extern std::atomic<long> cache_hit;
 extern std::atomic<long> cache_total;
 extern std::atomic<long> sst_count;
+extern shared_ptr<grpc::Channel> memory_config_channel_ptr
 
 class MemoryConfigClient {
     public:
