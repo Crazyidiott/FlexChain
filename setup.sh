@@ -1,4 +1,4 @@
-export CLOUDLAB_HOME=~/opt/dahui
+export CLOUDLAB_HOME=~/workspace
 export MY_INSTALL_DIR=$CLOUDLAB_HOME/.local
 export PATH="$MY_INSTALL_DIR/bin:$PATH"
 

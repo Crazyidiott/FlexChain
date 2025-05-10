@@ -37,6 +37,7 @@ struct MConfigInfo {
     size_t bg_buffer_size;
     uint16_t sock_port;
     string grpc_endpoint;
+    string memory_config_grpc_endpoint;
 };
 
 struct CConfigInfo {

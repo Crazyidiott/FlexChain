@@ -575,8 +575,8 @@ int main(int argc, char *argv[]) {
             sstream >> m_config_info.sock_port;
         } else if (tmp[0] == "grpc_endpoint") {
             m_config_info.grpc_endpoint = tmp[1];
-        } else if (tmp[0] == "config_grpc_endpoint") {
-            config_grpc_endpoint = tmp[1];
+        } else if (tmp[0] == "memory_config_grpc_endpoint") {
+            memory_config_grpc_endpoint = tmp[1];
         } else if (tmp[0] == "evict_threshold") {
             sstream >> EVICT_THR;
         }  else {

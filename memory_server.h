@@ -21,6 +21,7 @@
 #include <sstream>
 
 #include "storage.grpc.pb.h"
+#include "memory_config.pb.h"
 #include "memory_config.grpc.pb.h"
 
 // 移除宏定义
@@ -32,6 +33,10 @@ using namespace std;
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
+using grpc::ServerContext;
+using grpc::Server;
+using grpc::ServerBuilder;
+using grpc::ServerContext;
 
 // 添加新的MemoryConfigService服务类
 class MemoryConfigServiceImpl final : public MemoryConfig::Service {
