@@ -596,7 +596,7 @@ int main(int argc, char *argv[]) {
 
     /* start config service thread */
     pthread_t config_tid;
-    pthread_create(&config_tid, NULL, config_service_thread, &memory_config_grpc_endpoint);
+    pthread_create(&config_tid, NULL, config_service_thread, &m_config_info.memory_config_grpc_endpoint);
     pthread_detach(config_tid);
 
     /* set up RDMA connection with compute servers */
