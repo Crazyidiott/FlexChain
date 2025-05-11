@@ -36,21 +36,8 @@ bool MemoryConfigClient::GetEvictThreshold(uint32_t& threshold, uint32_t& free_a
     ClientContext context;
     GetEvictThresholdRequest request;
     EvictThresholdResponse response;
-    log_info(stderr, "Sending GetEvictThreshold request to memory config service");
     
     Status status = stub_->GetEvictThreshold(&context, request, &response);
-
-    if (!status.ok()) {
-        log_err("Memory config gRPC failed: code=%d, message='%s'", 
-                status.error_code(), status.error_message().c_str());
-        return false;
-    }
-    
-    if (!response.success()) {
-        log_err("Memory config service reported failure");
-        return false;
-    }
-    
     
     if (status.ok() && response.success()) {
         threshold = response.threshold();
