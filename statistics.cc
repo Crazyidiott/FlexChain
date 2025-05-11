@@ -462,6 +462,7 @@ void* SystemStateManager::CollectionThread(void* arg) {
         MemoryConfigClient memory_client(memory_config_channel_ptr);
         uint32_t evict_thr, free_addrs;
         if (memory_client.GetEvictThreshold(evict_thr, free_addrs)) {
+            log_info(stderr, "Current EVICT_THR: %u, Current free addrs: %u", evict_thr, free_addrs);
             state.set_evict_threshold(evict_thr);
             state.set_memory_utilization(manager->CalculateMemoryUtilization(free_addrs, evict_thr));
         } else {
