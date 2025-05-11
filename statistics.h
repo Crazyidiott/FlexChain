@@ -44,6 +44,7 @@ using grpc::Status;
 void start_statistics_thread();
 void stop_statistics_thread();
 void *statistics_thread(void *arg);
+void *statistics_thread_old(void *arg);
 void *statistics_thread_avg(void *arg);
 
 extern std::atomic<long> total_ops;
