@@ -57,7 +57,6 @@ extern std::atomic<long> BANK_ops;
 extern std::shared_ptr<grpc::Channel> memory_config_channel_ptr;
 class CoreManager;
 extern CoreManager* g_core_manager;
-extern SystemStateManager* g_state_manager;
 extern std::shared_ptr<grpc::Channel> rl_agent_channel_ptr;
 
 typedef struct {
@@ -122,7 +121,7 @@ private:
     // 计算内存利用率
     double CalculateMemoryUtilization(uint32_t free_addrs, uint32_t evict_thr);
 
-    double SystemStateManager::CalculateCpuUtilization(int cpu_id)
+    double SystemStateManager::CalculateCpuUtilization(int cpu_id);
     
     // 计算平均CPU利用率
     double CalculateAverageCpuUtilization();
@@ -146,6 +145,7 @@ private:
     // CPU利用率计算相关
     std::vector<cpu_stats_t> last_cpu_stats_by_core_;
 };
+extern SystemStateManager* g_state_manager;
 
 
 
