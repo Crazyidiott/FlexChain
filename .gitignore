@@ -12,3 +12,5 @@ testdb/*
 consensus/*
 mydata/
 update.sh
+setup_ib.h
+setup_ib.cc
