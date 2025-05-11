@@ -121,6 +121,8 @@ private:
     
     // 计算内存利用率
     double CalculateMemoryUtilization(uint32_t free_addrs, uint32_t evict_thr);
+
+    double SystemStateManager::CalculateCpuUtilization(int cpu_id)
     
     // 计算平均CPU利用率
     double CalculateAverageCpuUtilization();

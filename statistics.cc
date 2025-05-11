@@ -195,7 +195,7 @@ double compute_cpu_usage(const cpu_stats_t& prev, const cpu_stats_t& curr) {
 
 
 // 计算区间指标, 获取每个cpu的usage数据
-void *statistics_thread(void *arg) {
+void *statistics_thread_old(void *arg) {
     long last_ops = total_ops.load();
     long last_cache_hit = cache_hit.load();
 
