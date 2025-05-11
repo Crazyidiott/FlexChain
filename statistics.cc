@@ -32,7 +32,7 @@ bool MemoryConfigClient::SetEvictThreshold(uint32_t threshold, uint32_t& new_thr
     return false;
 }
 
-bool MemoryConfigClient::GetEvictThreshold(uint32_t& threshold) {
+bool MemoryConfigClient::(uint32_t& threshold, uint32_t& free_addrs) {
     ClientContext context;
     GetEvictThresholdRequest request;
     EvictThresholdResponse response;
@@ -41,6 +41,7 @@ bool MemoryConfigClient::GetEvictThreshold(uint32_t& threshold) {
     
     if (status.ok() && response.success()) {
         threshold = response.threshold();
+        free_addrs = response.free_addrs();
         return true;
     }
     return false;
@@ -199,8 +200,9 @@ void *statistics_thread(void *arg) {
     
         // 获取当前阈值
         uint32_t current_threshold;
-        if (config_client.GetEvictThreshold(current_threshold)) {
-            log_info(stderr, "Current EVICT_THR: %u", current_threshold);
+        uint32_t current_free_addrs;
+        if (config_client.GetEvictThreshold(current_threshold, current_free_addrs)) {
+            log_info(stderr, "Current EVICT_THR: %u, Current free addrs: %u", current_threshold, current_free_addrs);
         }
         
         // 设置新阈值

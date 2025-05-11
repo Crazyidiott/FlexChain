@@ -18,5 +18,6 @@ message GetEvictThresholdRequest {
 
 message EvictThresholdResponse {
   uint32 threshold = 1;
-  bool success = 2;
+  uint32 free_addrs = 2;
+  bool success = 3;
 }

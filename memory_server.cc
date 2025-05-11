@@ -34,6 +34,7 @@ Status MemoryConfigServiceImpl::SetEvictThreshold(ServerContext* context, const 
 Status MemoryConfigServiceImpl::GetEvictThreshold(ServerContext* context, const GetEvictThresholdRequest* request, EvictThresholdResponse* response) {
     pthread_mutex_lock(&evict_thr_mutex);
     response->set_threshold(EVICT_THR);
+    response->set_free_addrs(space_allocator.free_addrs.size());
     response->set_success(true);
     pthread_mutex_unlock(&evict_thr_mutex);
     return Status::OK;
