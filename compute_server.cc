@@ -22,7 +22,7 @@ MetaDataCache metadatacache;
 shared_ptr<grpc::Channel> storage_channel_ptr;
 shared_ptr<grpc::Channel> orderer_channel_ptr;
 shared_ptr<grpc::Channel> memory_config_channel_ptr;
-shared_ptr<>grpc::Channel> rl_agent_channel_ptr;
+shared_ptr<grpc::Channel> rl_agent_channel_ptr;
 vector<shared_ptr<grpc::Channel>> compute_channel_ptrs;
 pthread_mutex_t logger_lock;
 FILE *logger_fp;
