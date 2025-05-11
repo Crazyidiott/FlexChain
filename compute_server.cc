@@ -22,6 +22,7 @@ MetaDataCache metadatacache;
 shared_ptr<grpc::Channel> storage_channel_ptr;
 shared_ptr<grpc::Channel> orderer_channel_ptr;
 shared_ptr<grpc::Channel> memory_config_channel_ptr;
+shared_ptr<>grpc::Channel> rl_agent_channel_ptr;
 vector<shared_ptr<grpc::Channel>> compute_channel_ptrs;
 pthread_mutex_t logger_lock;
 FILE *logger_fp;
@@ -1003,6 +1004,7 @@ void run_server(const string &server_address, bool is_validator) {
     int num_sim_threads = c_config_info.num_sim_threads;
     //TODO: HARD CODED
     CoreManager core_manager(2, 0, num_threads);
+    g_core_manager = &core_manager;
     // std::vector<int> specific_cores = {0}; 
     core_manager.initialize(1,{0});
     core_manager.add_validation_thread(0);
@@ -1663,13 +1665,14 @@ int main(int argc, char *argv[]) {
             if (is_validator) {
                 compute_channel_ptrs.push_back(grpc::CreateChannel(tmp[1], grpc::InsecureChannelCredentials()));
             }
-        }
-        else if (tmp[0] == "compute_grpc_endpoint") {
+        } else if (tmp[0] == "compute_grpc_endpoint") {
             if (is_validator) {
                 compute_channel_ptrs.push_back(grpc::CreateChannel(tmp[1], grpc::InsecureChannelCredentials()));
             }
         } else if(tmp[0] == "memory_config_grpc_endpoint") {
             c_config_info.memory_config_grpc_endpoint = tmp[1];
+        } else if(tmp[0] == "rl_agent_grpc_endpoint") {
+            c_config_info.rl_agent_grpc_endpoint = tmp[1];
         } else {
             fprintf(stderr, "Invalid config parameter `%s`.\n", tmp[0].c_str());
             exit(1);
@@ -1686,6 +1689,8 @@ int main(int argc, char *argv[]) {
     storage_channel_ptr = grpc::CreateChannel(c_config_info.storage_grpc_endpoint, grpc::InsecureChannelCredentials());
     orderer_channel_ptr = grpc::CreateChannel(c_config_info.orderer_grpc_endpoint, grpc::InsecureChannelCredentials());
     memory_config_channel_ptr = grpc::CreateChannel(c_config_info.memory_config_grpc_endpoint, grpc::InsecureChannelCredentials());
+    rl_agent_channel_ptr = grpc::CreateChannel(c_config_info.rl_agent_grpc_endpoint, grpc::InsecureChannelCredentials());
+
     /* set up RDMA connection with the memory server */
     compute_setup_ib(c_config_info, c_ib_info);
 

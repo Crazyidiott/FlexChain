@@ -55,6 +55,7 @@ struct CConfigInfo {
     string storage_grpc_endpoint;
     string orderer_grpc_endpoint;
     string memory_config_grpc_endpoint;
+    string rl_agent_grpc_endpoint;
 };
 
 #endif

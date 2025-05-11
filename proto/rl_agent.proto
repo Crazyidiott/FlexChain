@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+service RLAgent {
+  rpc SendSystemStates(SystemStatesRequest) returns (SystemConfig) {}
+  rpc GetSystemConfig(ConfigRequest) returns (SystemConfig) {}
+}
+
+message SystemState {
+  int64 timestamp = 1;        // 状态采集的时间戳
+  int32 ycsb_ops = 2;         // interval内的YCSB操作数
+  int32 kmeans_ops = 3;       // interval内的KMEANS操作数
+  int32 bank_ops = 4;         // interval内的BANK操作数
+  double cpu_utilization = 5; // 平均CPU利用率
+  double memory_utilization = 6; // 内存利用率(400000 - free_addrs.size)/(400000 - evict_thr)
+  int32 total_ops = 7;        // interval内的总操作数
+  int32 core_count = 8;       // core_manager管理的核数量
+  int32 sim_threads_per_core = 9; // 每个核上的模拟线程数
+  int32 evict_threshold = 10;     // 当前的evict_thr值
+}
+
+message SystemStatesRequest {
+  repeated SystemState states = 1; // 多个系统状态
+  string node_id = 2;              // 节点标识符（可选）
+}
+
+message ConfigRequest {
+  string node_id = 1;              // 节点标识符（可选）
+}
+
+message SystemConfig {
+  int32 core_adjustment = 1;      // 核数的变动，正数增加，负数减少
+  int32 thread_adjustment = 2;    // 模拟线程数的变动，正数增加，负数减少
+  int32 evict_thr_adjustment = 3; // evict_thr的变动值，正数增加，负数减少
+}

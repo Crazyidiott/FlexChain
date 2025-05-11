@@ -38,3 +38,26 @@ void *statistics_thread_avg(void *arg) {
     }
     return NULL;
 }
+
+// 获取内存使用率，暂时不使用
+static double get_memory_usage_percent() {
+    FILE *fp = fopen("/proc/meminfo", "r");
+    if (!fp) {
+        log_err("Failed to open /proc/meminfo");
+        return -1;
+    }
+
+    long mem_total = 0, mem_free = 0, buffers = 0, cached = 0;
+    char key[64];
+    long value;
+    while (fscanf(fp, "%63s %ld", key, &value) == 2) {
+        if (strcmp(key, "MemTotal:") == 0) mem_total = value;
+        else if (strcmp(key, "MemFree:") == 0) mem_free = value;
+        else if (strcmp(key, "Buffers:") == 0) buffers = value;
+        else if (strcmp(key, "Cached:") == 0) cached = value;
+    }
+    fclose(fp);
+
+    long used = mem_total - mem_free - buffers - cached;
+    return (double)used / mem_total * 100.0;
+}
