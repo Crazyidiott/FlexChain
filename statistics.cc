@@ -32,7 +32,7 @@ bool MemoryConfigClient::SetEvictThreshold(uint32_t threshold, uint32_t& new_thr
     return false;
 }
 
-bool MemoryConfigClient::(uint32_t& threshold, uint32_t& free_addrs) {
+bool MemoryConfigClient::GetEvictThreshold(uint32_t& threshold, uint32_t& free_addrs) {
     ClientContext context;
     GetEvictThresholdRequest request;
     EvictThresholdResponse response;
