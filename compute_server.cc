@@ -1742,7 +1742,8 @@ void example_of_using_memory_config_client() {
     
     // 获取当前阈值
     uint32_t current_threshold;
-    if (config_client.GetEvictThreshold(current_threshold)) {
+    uint32_t free_addrs;
+    if (config_client.GetEvictThreshold(current_threshold, free_addrs)) {
         log_info(stderr, "Current EVICT_THR: %u", current_threshold);
     }
     
