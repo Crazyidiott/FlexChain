@@ -1689,7 +1689,7 @@ int main(int argc, char *argv[]) {
     storage_channel_ptr = grpc::CreateChannel(c_config_info.storage_grpc_endpoint, grpc::InsecureChannelCredentials());
     orderer_channel_ptr = grpc::CreateChannel(c_config_info.orderer_grpc_endpoint, grpc::InsecureChannelCredentials());
     memory_config_channel_ptr = grpc::CreateChannel(c_config_info.memory_config_grpc_endpoint, grpc::InsecureChannelCredentials());
-    // rl_agent_channel_ptr = grpc::CreateChannel(c_config_info.rl_agent_grpc_endpoint, grpc::InsecureChannelCredentials());
+    rl_agent_channel_ptr = grpc::CreateChannel(c_config_info.rl_agent_grpc_endpoint, grpc::InsecureChannelCredentials());
 
     /* set up RDMA connection with the memory server */
     compute_setup_ib(c_config_info, c_ib_info);
