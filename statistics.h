@@ -60,7 +60,7 @@ class MemoryConfigClient {
         bool SetEvictThreshold(uint32_t threshold, uint32_t& new_threshold);
         
         // 获取当前驱逐阈值
-        bool GetEvictThreshold(uint32_t& threshold);
+        bool GetEvictThreshold(uint32_t& threshold, uint32_t& free_addrs);
     
     private:
         std::unique_ptr<MemoryConfig::Stub> stub_;
