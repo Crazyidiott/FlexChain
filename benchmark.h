@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <atomic>
 #include <chrono>
 #include <queue>
 #include <random>
@@ -22,12 +22,13 @@ using namespace std;
 #define TRUE 1
 #define YCSB_KEY_NUM 4000
 #define KMEANS_KEY_NUM 4000
-#define BANK_KEY_NUM 20000
+#define BANK_KEY_NUM 2000
 
 struct Request {
     enum Type {
         GET,
         PUT,
+        KM_PUT,
         KMEANS,
         TransactSavings,
         DepositChecking,

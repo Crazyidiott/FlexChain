@@ -28,6 +28,9 @@ FILE *logger_fp;
 volatile int end_flag = 0;
 volatile int start_flag = 0;
 atomic<long> total_ops = 0;
+atomic<long> YCSB_ops = 0;
+atomic<long> KMEANS_ops = 0;
+atomic<long> BANK_ops = 0;
 
 atomic<long> cache_hit = 0;
 atomic<long> sst_count = 0;
@@ -524,7 +527,8 @@ void *simulation_handler(void *arg) {
             // local_ops++;
 
             s_kv_get(*ctx, storage_client, proposal.key, endorsement);
-        } else if (proposal.type == Request::Type::PUT) {
+
+        } else if (proposal.type == Request::Type::PUT or proposal.type == Request::Type::KM_PUT) {
             // int ret = kv_put(ctx, proposal.key, proposal.value);
             // int ret = storage_client.write_sstables(proposal.key, proposal.value);
             // bzero(buf, 1024 * 10);

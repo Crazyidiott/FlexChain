@@ -5,6 +5,9 @@ extern std::atomic<long> cache_hit;
 extern std::atomic<long> cache_total;
 extern std::atomic<long> sst_count;
 extern volatile int end_flag;
+extern std::atomic<long> YCSB_ops;
+extern std::atomic<long> KMEANS_ops;
+extern std::atomic<long> BANK_ops;
 pthread_t stats_thread;
 
 #define MAX_CPUS 128   // 假设不超过128个核心
