@@ -9,76 +9,70 @@
 #include "log.h"
 #include "utils.h"
 
-int modify_qp_to_rts(struct ibv_qp *qp, uint32_t target_qp_num, uint16_t target_lid, const char *target_gid_raw) {
+int modify_qp_to_rts(struct ibv_qp *qp, uint32_t target_qp_num, uint16_t target_lid) {
     /* change QP state to INIT */
-    struct ibv_qp_attr init_attr;
-    memset(&init_attr, 0, sizeof(init_attr));
-    init_attr.qp_state = IBV_QPS_INIT;
-    init_attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE |
-                                IBV_ACCESS_REMOTE_READ |
-                                IBV_ACCESS_REMOTE_ATOMIC |
-                                IBV_ACCESS_REMOTE_WRITE;
-    init_attr.pkey_index = 0;
-    init_attr.port_num = IB_PORT;
+    struct ibv_qp_attr init_attr = {
+        .qp_state = IBV_QPS_INIT,
+        .qp_access_flags = IBV_ACCESS_LOCAL_WRITE |
+                           IBV_ACCESS_REMOTE_READ |
+                           IBV_ACCESS_REMOTE_ATOMIC |
+                           IBV_ACCESS_REMOTE_WRITE,
+        .pkey_index = 0,
+        .port_num = IB_PORT,
+    };
 
     int ret = 0;
     ret = ibv_modify_qp(qp, &init_attr,
                         IBV_QP_STATE | IBV_QP_PKEY_INDEX |
-                        IBV_QP_PORT | IBV_QP_ACCESS_FLAGS);
+                            IBV_QP_PORT | IBV_QP_ACCESS_FLAGS);
     if (ret != 0) {
-        log_err("Failed to modify qp to INIT: %s", strerror(errno));
+        log_err("Failed to modify qp to INIT.");
         return -1;
     }
 
     /* Change QP state to RTR */
-    struct ibv_qp_attr rtr_attr;
-    memset(&rtr_attr, 0, sizeof(rtr_attr));
-    rtr_attr.qp_state = IBV_QPS_RTR;
-    rtr_attr.path_mtu = IB_MTU;
-    rtr_attr.rq_psn = 0;
-    rtr_attr.dest_qp_num = target_qp_num;
-    rtr_attr.ah_attr.dlid = target_lid;
-    rtr_attr.ah_attr.sl = IB_SL;
-    rtr_attr.ah_attr.src_path_bits = 0;
-    rtr_attr.ah_attr.is_global = 1;  // 使用GID而不是LID
-    rtr_attr.ah_attr.port_num = IB_PORT;
-    
-    // 设置GID信息
-    memcpy(rtr_attr.ah_attr.grh.dgid.raw, target_gid_raw, 16);
-    rtr_attr.ah_attr.grh.flow_label = 0;
-    rtr_attr.ah_attr.grh.sgid_index = 0;  // 使用第一个GID索引
-    rtr_attr.ah_attr.grh.hop_limit = 1;
-    rtr_attr.ah_attr.grh.traffic_class = 0;
-    
-    rtr_attr.max_dest_rd_atomic = 1;
-    rtr_attr.min_rnr_timer = 12;
+    struct ibv_qp_attr rtr_attr = {
+        .qp_state = IBV_QPS_RTR,
+        .path_mtu = IB_MTU,
+        .rq_psn = 0,
+        .dest_qp_num = target_qp_num,
+        .ah_attr = {
+            .dlid = target_lid,
+            .sl = IB_SL,
+            .src_path_bits = 0,
+            .is_global = 0,
+            .port_num = IB_PORT,
+        },
+        .max_dest_rd_atomic = 1,
+        .min_rnr_timer = 12,
+    };
 
     ret = ibv_modify_qp(qp, &rtr_attr,
                         IBV_QP_STATE | IBV_QP_AV |
-                        IBV_QP_PATH_MTU | IBV_QP_DEST_QPN |
-                        IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC |
-                        IBV_QP_MIN_RNR_TIMER);
+                            IBV_QP_PATH_MTU | IBV_QP_DEST_QPN |
+                            IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC |
+                            IBV_QP_MIN_RNR_TIMER);
     if (ret != 0) {
-        log_err("Failed to change qp to rtr: %s", strerror(errno));
+        log_err("Failed to change qp to rtr.");
         return -1;
     }
 
     /* Change QP state to RTS */
-    struct ibv_qp_attr rts_attr;
-    memset(&rts_attr, 0, sizeof(rts_attr));
-    rts_attr.qp_state = IBV_QPS_RTS;
-    rts_attr.sq_psn = 0;
-    rts_attr.max_rd_atomic = 1;
-    rts_attr.timeout = 14;
-    rts_attr.retry_cnt = 7;
-    rts_attr.rnr_retry = 7;
+    struct ibv_qp_attr rts_attr = {
+        .qp_state = IBV_QPS_RTS,
+        .sq_psn = 0,
+        .max_rd_atomic = 1,
+        .timeout = 14,
+        .retry_cnt = 7,
+        .rnr_retry = 7,
+    };
 
     ret = ibv_modify_qp(qp, &rts_attr,
                         IBV_QP_STATE | IBV_QP_TIMEOUT |
-                        IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY |
-                        IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC);
+                            IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY |
+                            IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC);
     if (ret != 0) {
-        log_err("Failed to change qp to rts: %s", strerror(errno));
+        log_err("Failed to change qp to rts.");
         return -1;
     }
 
@@ -124,25 +118,14 @@ int connect_qp_server(struct MConfigInfo& m_config_info, struct MemoryIBInfo& m_
     local_qp_info = (struct QPInfo *)calloc(m_ib_info.num_qps + m_config_info.num_compute_servers, sizeof(struct QPInfo));
     remote_qp_info = (struct QPInfo *)calloc(m_ib_info.num_qps + m_config_info.num_compute_servers, sizeof(struct QPInfo));
 
-    // 获取本地GID
-    union ibv_gid local_gid;
-    if (ibv_query_gid(m_ib_info.ctx, IB_PORT, 0, &local_gid)) {
-        log_err("Failed to query local GID.");
-        return -1;
-    }
-    
-    print_gid("Server GID", (const char*)local_gid.raw);
-
     for (int i = 0; i < m_ib_info.num_qps; i++) {
         local_qp_info[i].lid = m_ib_info.port_attr.lid;
         local_qp_info[i].qp_num = m_ib_info.qp[i]->qp_num;
-        memcpy(local_qp_info[i].gid_raw, local_gid.raw, 16);
     }
 
     for (int i = 0; i < m_config_info.num_compute_servers; i++) {
         local_qp_info[i + m_ib_info.num_qps].lid = m_ib_info.port_attr.lid;
         local_qp_info[i + m_ib_info.num_qps].qp_num = m_ib_info.bg_qp[i]->qp_num;
-        memcpy(local_qp_info[i + m_ib_info.num_qps].gid_raw, local_gid.raw, 16);
     }
 
     /* get qp_info from client */
@@ -159,9 +142,6 @@ int connect_qp_server(struct MConfigInfo& m_config_info, struct MemoryIBInfo& m_
             int index = i * m_config_info.num_qps_per_server + j;
             remote_qp_info[index].lid = ntohs(tmp_qp_info.lid);
             remote_qp_info[index].qp_num = ntohl(tmp_qp_info.qp_num);
-            memcpy(remote_qp_info[index].gid_raw, tmp_qp_info.gid_raw, 16);
-            
-            print_gid("Received client QP GID", remote_qp_info[index].gid_raw);
         }
         struct QPInfo tmp_qp_info;
 
@@ -173,7 +153,6 @@ int connect_qp_server(struct MConfigInfo& m_config_info, struct MemoryIBInfo& m_
 
         remote_qp_info[i + m_ib_info.num_qps].lid = ntohs(tmp_qp_info.lid);
         remote_qp_info[i + m_ib_info.num_qps].qp_num = ntohl(tmp_qp_info.qp_num);
-        memcpy(remote_qp_info[i + m_ib_info.num_qps].gid_raw, tmp_qp_info.gid_raw, 16);
     }
 
     /* send qp_info and rkey to client */
@@ -191,7 +170,6 @@ int connect_qp_server(struct MConfigInfo& m_config_info, struct MemoryIBInfo& m_
             int index = i * m_config_info.num_qps_per_server + j;
             tmp_qp_info.lid = htons(local_qp_info[index].lid);
             tmp_qp_info.qp_num = htonl(local_qp_info[index].qp_num);
-            memcpy(tmp_qp_info.gid_raw, local_qp_info[index].gid_raw, 16);
 
             int n = sock_write(comm_fds[i], (char *)&tmp_qp_info, sizeof(struct QPInfo));
             if (n != sizeof(struct QPInfo)) {
@@ -203,7 +181,6 @@ int connect_qp_server(struct MConfigInfo& m_config_info, struct MemoryIBInfo& m_
 
         tmp_qp_info.lid = htons(local_qp_info[i + m_ib_info.num_qps].lid);
         tmp_qp_info.qp_num = htonl(local_qp_info[i + m_ib_info.num_qps].qp_num);
-        memcpy(tmp_qp_info.gid_raw, local_qp_info[i + m_ib_info.num_qps].gid_raw, 16);
 
         n = sock_write(comm_fds[i], (char *)&tmp_qp_info, sizeof(struct QPInfo));
         if (n != sizeof(struct QPInfo)) {
@@ -214,11 +191,11 @@ int connect_qp_server(struct MConfigInfo& m_config_info, struct MemoryIBInfo& m_
 
     /* change all local QP state to RTS */
     for (int i = 0; i < m_ib_info.num_qps; i++) {
-        modify_qp_to_rts(m_ib_info.qp[i], remote_qp_info[i].qp_num, remote_qp_info[i].lid, remote_qp_info[i].gid_raw);
+        modify_qp_to_rts(m_ib_info.qp[i], remote_qp_info[i].qp_num, remote_qp_info[i].lid);
     }
     for (int i = 0; i < m_config_info.num_compute_servers; i++) {
         modify_qp_to_rts(m_ib_info.bg_qp[i], remote_qp_info[i + m_ib_info.num_qps].qp_num,
-                         remote_qp_info[i + m_ib_info.num_qps].lid, remote_qp_info[i + m_ib_info.num_qps].gid_raw);
+                         remote_qp_info[i + m_ib_info.num_qps].lid);
     }
 
     /* pre-post recvs */
@@ -268,73 +245,26 @@ int memory_setup_ib(struct MConfigInfo &m_config_info, struct MemoryIBInfo &m_ib
 
     /* get IB device list */
     dev_list = ibv_get_device_list(NULL);
-    if (dev_list == NULL  || *dev_list == NULL) {
+    if (dev_list == NULL) {
         log_err("Failed to get ib device list.");
     }
 
-    log_info(stderr, "Available RDMA devices:");
-    for (int i = 0; dev_list[i]; i++) {
-        log_info(stderr, "  Device %d: %s", i, ibv_get_device_name(dev_list[i]));
-    }
-
-    struct ibv_device *rxe_dev = NULL;
-    for (int i = 0; dev_list[i]; i++) {
-        if (strstr(ibv_get_device_name(dev_list[i]), "rxe") != NULL) {
-            rxe_dev = dev_list[i];
-            break;
-        }
-    }
-
-    // 如果找到rxe设备就使用它，否则使用第一个可用设备
-    if (rxe_dev != NULL) {
-        m_ib_info.ctx = ibv_open_device(rxe_dev);
-        log_info(stderr, "Using RoCE device: %s", ibv_get_device_name(rxe_dev));
-    } else {
-        m_ib_info.ctx = ibv_open_device(*dev_list);
-        log_info(stderr, "Using first available device: %s", ibv_get_device_name(*dev_list));
-    }
-
+    /* create IB context */
+    m_ib_info.ctx = ibv_open_device(*dev_list);
     if (m_ib_info.ctx == NULL) {
         log_err("Failed to open ib device.");
-        ibv_free_device_list(dev_list);
-        return -1;
     }
 
     /* allocate protection domain */
     m_ib_info.pd = ibv_alloc_pd(m_ib_info.ctx);
     if (m_ib_info.pd == NULL) {
         log_err("Failed to allocate protection domain.");
-        ibv_close_device(m_ib_info.ctx);
-        ibv_free_device_list(dev_list);
-        return -1;
     }
 
     /* query IB port attribute */
     if (ibv_query_port(m_ib_info.ctx, IB_PORT, &m_ib_info.port_attr)) {
         log_err("Failed to query IB port information.");
-        ibv_dealloc_pd(m_ib_info.pd);
-        ibv_close_device(m_ib_info.ctx);
-        ibv_free_device_list(dev_list);
-        return -1;
     }
-
-    // 打印设备详细信息
-    print_device_info(m_ib_info.ctx, IB_PORT);
-
-    // union ibv_gid gid;
-    // if (ibv_query_gid(m_ib_info.ctx, IB_PORT, 0, &gid)) {
-    //     log_err("Failed to query GID.");
-    //     ibv_dealloc_pd(m_ib_info.pd);
-    //     ibv_close_device(m_ib_info.ctx);
-    //     ibv_free_device_list(dev_list);
-    //     return -1;
-    // }
-    
-    // log_info(stderr, "Device GID: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
-    //         gid.raw[0], gid.raw[1], gid.raw[2], gid.raw[3], 
-    //         gid.raw[4], gid.raw[5], gid.raw[6], gid.raw[7],
-    //         gid.raw[8], gid.raw[9], gid.raw[10], gid.raw[11],
-    //         gid.raw[12], gid.raw[13], gid.raw[14], gid.raw[15]);
 
     /* register mr */
     m_ib_info.ib_data_buf = (char *)memalign(4096, m_config_info.data_slab_size);
@@ -471,23 +401,12 @@ int connect_qp_client(struct CConfigInfo& c_config_info, struct ComputeIBInfo& c
     local_qp_info = (struct QPInfo *)calloc(c_ib_info.num_qps + 1, sizeof(struct QPInfo));
     remote_qp_info = (struct QPInfo *)calloc(c_ib_info.num_qps + 1, sizeof(struct QPInfo));
 
-    // 获取本地GID
-    union ibv_gid local_gid;
-    if (ibv_query_gid(c_ib_info.ctx, IB_PORT, 0, &local_gid)) {
-        log_err("Failed to query local GID.");
-        return -1;
-    }
-    
-    print_gid("Client GID", (const char*)local_gid.raw);
-
     for (int i = 0; i < c_ib_info.num_qps; i++) {
         local_qp_info[i].lid = c_ib_info.port_attr.lid;
         local_qp_info[i].qp_num = c_ib_info.qp[i]->qp_num;
-        memcpy(local_qp_info[i].gid_raw, local_gid.raw, 16);
     }
     local_qp_info[c_ib_info.num_qps].lid = c_ib_info.port_attr.lid;
     local_qp_info[c_ib_info.num_qps].qp_num = c_ib_info.bg_qp->qp_num;
-    memcpy(local_qp_info[c_ib_info.num_qps].gid_raw, local_gid.raw, 16);
 
     /* send qp_info to server */
     for (int i = 0; i < c_config_info.num_qps_per_server + 1; i++) {
@@ -495,7 +414,6 @@ int connect_qp_client(struct CConfigInfo& c_config_info, struct ComputeIBInfo& c
 
         tmp_qp_info.lid = htons(local_qp_info[i].lid);
         tmp_qp_info.qp_num = htonl(local_qp_info[i].qp_num);
-        memcpy(tmp_qp_info.gid_raw, local_qp_info[i].gid_raw, 16);
 
         int n = sock_write(sockfd, (char *)&tmp_qp_info, sizeof(struct QPInfo));
         if (n != sizeof(struct QPInfo)) {
@@ -523,17 +441,14 @@ int connect_qp_client(struct CConfigInfo& c_config_info, struct ComputeIBInfo& c
 
         remote_qp_info[i].lid = ntohs(tmp_qp_info.lid);
         remote_qp_info[i].qp_num = ntohl(tmp_qp_info.qp_num);
-        memcpy(remote_qp_info[i].gid_raw, tmp_qp_info.gid_raw, 16);
-        
-        print_gid("Received server QP GID", remote_qp_info[i].gid_raw);
     }
 
     /* change all local QP state to RTS */
     for (int i = 0; i < c_ib_info.num_qps; i++) {
-        modify_qp_to_rts(c_ib_info.qp[i], remote_qp_info[i].qp_num, remote_qp_info[i].lid, remote_qp_info[i].gid_raw);
+        modify_qp_to_rts(c_ib_info.qp[i], remote_qp_info[i].qp_num, remote_qp_info[i].lid);
     }
     modify_qp_to_rts(c_ib_info.bg_qp, remote_qp_info[c_ib_info.num_qps].qp_num,
-                     remote_qp_info[c_ib_info.num_qps].lid, remote_qp_info[c_ib_info.num_qps].gid_raw);
+                     remote_qp_info[c_ib_info.num_qps].lid);
 
     /* pre-post recvs in bg_qp */
     int ret = post_recv(c_config_info.bg_msg_size, c_ib_info.mr_bg->lkey, (uintptr_t)c_ib_info.ib_bg_buf,
@@ -571,62 +486,26 @@ int compute_setup_ib(struct CConfigInfo &c_config_info, struct ComputeIBInfo &c_
 
     /* get IB device list */
     dev_list = ibv_get_device_list(NULL);
-    if (dev_list == NULL || *dev_list == NULL) {
-        log_err("Failed to get ib device list or no devices found.");
-        return -1;
-    }
-
-    // 打印所有可用设备，帮助调试
-    log_info(stderr, "Available RDMA devices:");
-    for (int i = 0; dev_list[i]; i++) {
-        log_info(stderr, "  Device %d: %s", i, ibv_get_device_name(dev_list[i]));
-    }
-
-    // 尝试找到rxe设备
-    struct ibv_device *rxe_dev = NULL;
-    for (int i = 0; dev_list[i]; i++) {
-        if (strstr(ibv_get_device_name(dev_list[i]), "rxe") != NULL) {
-            rxe_dev = dev_list[i];
-            break;
-        }
-    }
-
-    // 如果找到rxe设备就使用它，否则使用第一个可用设备
-    if (rxe_dev != NULL) {
-        c_ib_info.ctx = ibv_open_device(rxe_dev);
-        log_info(stderr, "Using RoCE device: %s", ibv_get_device_name(rxe_dev));
-    } else {
-        c_ib_info.ctx = ibv_open_device(*dev_list);
-        log_info(stderr, "Using first available device: %s", ibv_get_device_name(*dev_list));
+    if (dev_list == NULL) {
+        log_err("Failed to get ib device list.");
     }
 
     /* create IB context */
+    c_ib_info.ctx = ibv_open_device(*dev_list);
     if (c_ib_info.ctx == NULL) {
         log_err("Failed to open ib device.");
-        ibv_free_device_list(dev_list);
-        return -1;
     }
 
     /* allocate protection domain */
     c_ib_info.pd = ibv_alloc_pd(c_ib_info.ctx);
     if (c_ib_info.pd == NULL) {
         log_err("Failed to allocate protection domain.");
-        ibv_close_device(c_ib_info.ctx);
-        ibv_free_device_list(dev_list);
-        return -1;
     }
 
     /* query IB port attribute */
     if (ibv_query_port(c_ib_info.ctx, IB_PORT, &c_ib_info.port_attr)) {
         log_err("Failed to query IB port information.");
-        ibv_dealloc_pd(c_ib_info.pd);
-        ibv_close_device(c_ib_info.ctx);
-        ibv_free_device_list(dev_list);
-        return -1;
     }
-
-    // 打印设备详细信息
-    print_device_info(c_ib_info.ctx, IB_PORT);
 
     /* register mr */
     c_ib_info.ib_data_buf = (char *)memalign(4096, c_config_info.data_cache_size);
