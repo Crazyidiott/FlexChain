@@ -1061,7 +1061,7 @@ void run_server(const string &server_address, bool is_validator) {
 
     //=========================statistics thread=============================
     pthread_t stat_tid;
-    pthread_create(&stat_tid, NULL, statistics_thread_old, NULL);
+    pthread_create(&stat_tid, NULL, statistics_thread, NULL);
     //bind the statistic thread to cpu 0
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
