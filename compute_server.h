@@ -202,4 +202,73 @@ class CompletionSet {
     }
 };
 
+class CoreManager {
+private:
+    // Track active cores
+    std::vector<int> active_cores;
+    
+    // Map core_id to its simulation and validation threads
+    std::unordered_map<int, std::vector<pthread_t>> sim_threads_by_core;
+    std::unordered_map<int, std::vector<pthread_t>> val_threads_by_core;
+    
+    // Communication components pool
+    std::vector<ThreadContext> thread_contexts;
+    std::vector<bool> context_in_use;
+    std::unordered_map<pthread_t, int> thread_to_context_index;
+    
+    // Configuration
+    int sim_threads_per_core;
+    int val_threads_per_core;
+    int max_available_threads;
+    
+    // Thread synchronization
+    std::mutex core_mutex;
+    
+    // 创建并启动线程
+    pthread_t create_thread(int core_id, bool is_simulation);
+    
+    // 优雅地停止线程
+    void stop_thread(pthread_t tid);
+
+public:
+    CoreManager(int sim_per_core, int val_per_core, int max_threads);
+    ~CoreManager();
+    
+    // 初始化特定数量的核心
+    void initialize(int num_cores, const std::vector<int>& core_ids = {});
+    
+    // 初始化具有特定线程配置的核心
+    void initialize_with_config(int num_cores, 
+                               int sim_threads, 
+                               int val_threads, 
+                               const std::vector<int>& core_ids = {});
+    
+    // Get current number of cores
+    int get_core_count();
+    
+    // Get current threads per core
+    std::pair<int, int> get_threads_per_core();
+    
+    // Get maximum available threads
+    int get_max_threads();
+    
+    // 添加单个验证线程到指定核心
+    int add_validation_thread(int core_id);
+    
+    // Add a core with the current thread distribution
+    int add_core(int core_id);
+    
+    // Remove a core (defaults to last core if none specified)
+    int remove_core(int core_id = -1);
+    
+    // Adjust thread counts per core
+    int adjust_thread(int d_sim, int d_val);
+    
+    // 获取活动核心列表 - 为统计模块添加的新方法
+    std::vector<int> GetActiveCores();
+};
+
+
+extern CoreManager* g_core_manager;
+
 #endif
