@@ -176,7 +176,7 @@ def main():
     )
     
     # 获取动作空间大小
-    action_space = env.action_space.n
+    action_space = env.action_space_n.n
     
     # 创建智能体
     dqn = Agent(args, env)
