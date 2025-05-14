@@ -18,6 +18,8 @@ import bz2
 import pickle
 import logging
 
+
+os.makedirs("logs", exist_ok=True)
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
