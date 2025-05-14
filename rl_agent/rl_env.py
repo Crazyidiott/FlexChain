@@ -11,8 +11,8 @@ from datetime import datetime
 
 # 导入proto生成的Python模块
 # 根据实际情况调整导入路径
-from generated import rl_agent_pb2
-from generated import rl_agent_pb2_grpc
+import generated.rl_agent_pb2 as rl_agent_pb2
+import generated.rl_agent_pb2_grpc as rl_agent_pb2_grpc
 
 # 配置日志
 logging.basicConfig(
@@ -370,7 +370,7 @@ class FlexChainRLEnv(gym.Env):
         if self.performance_log_file:
             self.performance_log_file.close()
             logger.info("性能数据日志文件已关闭")
-            
+
         """关闭环境，停止gRPC服务器"""
         if self.server:
             self.server.stop(0)

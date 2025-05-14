@@ -495,10 +495,10 @@ void* SystemStateManager::CollectionThread(void* arg) {
         // 注意：这里可能想要控制发送频率，不一定每次收集都发送
         // 发送的代码
         static int send_counter = 0;
-        // if (++send_counter >= 3) {  // 例如每3次收集发送一次
-        //     manager->SendStatesAndApplyConfig();
-        //     send_counter = 0;
-        // }
+        if (++send_counter >= 1) {  // 例如每3次收集发送一次
+            manager->SendStatesAndApplyConfig();
+            send_counter = 0;
+        }
         
         // 记录日志
         log_info(stderr,
