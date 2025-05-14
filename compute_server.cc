@@ -1058,7 +1058,7 @@ void run_server(const string &server_address, bool is_validator) {
     start_client();
     //=======================================================================
 
-
+    // statistics 的次序是什么？
     //=========================statistics thread=============================
     pthread_t stat_tid;
     pthread_create(&stat_tid, NULL, statistics_thread, NULL);
@@ -1074,36 +1074,36 @@ void run_server(const string &server_address, bool is_validator) {
     //=======================================================================
 
     //=================threads number adjustment=============================
-    sleep(60);
-    log_info(stderr,"================removing one thread================\n");
-    core_manager.adjust_thread(-1, 0);
+    // sleep(60);
+    // log_info(stderr,"================removing one thread================\n");
+    // core_manager.adjust_thread(-1, 0);
 
-    sleep(60);
+    // sleep(60);
 
-    log_info(stderr,"================adding one core================\n");
-    core_manager.add_core(1);
+    // log_info(stderr,"================adding one core================\n");
+    // core_manager.add_core(1);
 
-    sleep(60);
+    // sleep(60);
 
 
-    log_info(stderr,"================adding one core================\n");
-    core_manager.add_core(2);
+    // log_info(stderr,"================adding one core================\n");
+    // core_manager.add_core(2);
 
-    sleep(30);
+    // sleep(30);
 
-    log_info(stderr,"================adding one core================\n");
-    core_manager.add_core(3);
-    core_manager.add_core(4);
-    core_manager.add_core(5);
-    core_manager.add_core(6);
-    core_manager.add_core(7);
-    core_manager.add_core(8);
-    core_manager.add_core(9);
-    core_manager.add_core(10);
-    core_manager.add_core(11);
-    core_manager.add_core(12);
-    core_manager.add_core(13);
-    core_manager.add_core(14);
+    // log_info(stderr,"================adding one core================\n");
+    // core_manager.add_core(3);
+    // core_manager.add_core(4);
+    // core_manager.add_core(5);
+    // core_manager.add_core(6);
+    // core_manager.add_core(7);
+    // core_manager.add_core(8);
+    // core_manager.add_core(9);
+    // core_manager.add_core(10);
+    // core_manager.add_core(11);
+    // core_manager.add_core(12);
+    // core_manager.add_core(13);
+    // core_manager.add_core(14);
     
     
 
@@ -1689,7 +1689,7 @@ int main(int argc, char *argv[]) {
     storage_channel_ptr = grpc::CreateChannel(c_config_info.storage_grpc_endpoint, grpc::InsecureChannelCredentials());
     orderer_channel_ptr = grpc::CreateChannel(c_config_info.orderer_grpc_endpoint, grpc::InsecureChannelCredentials());
     memory_config_channel_ptr = grpc::CreateChannel(c_config_info.memory_config_grpc_endpoint, grpc::InsecureChannelCredentials());
-    rl_agent_channel_ptr = grpc::CreateChannel(c_config_info.rl_agent_grpc_endpoint, grpc::InsecureChannelCredentials());
+    // rl_agent_channel_ptr = grpc::CreateChannel(c_config_info.rl_agent_grpc_endpoint, grpc::InsecureChannelCredentials());
 
     /* set up RDMA connection with the memory server */
     compute_setup_ib(c_config_info, c_ib_info);
