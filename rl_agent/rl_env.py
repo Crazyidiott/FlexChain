@@ -46,7 +46,7 @@ class FlexChainRLEnv(gym.Env):
         self.evict_thr_adjustments = [-1000, -100, 0, 100, 1000]
         
         # 动作空间为三个子空间的笛卡尔积
-        self.action_space = spaces.Discrete(
+        self.action_space_n = spaces.Discrete(
             len(self.core_adjustments) * 
             len(self.thread_adjustments) * 
             len(self.evict_thr_adjustments)
@@ -323,7 +323,7 @@ class FlexChainRLEnv(gym.Env):
 
     def action_space(self):
         """返回动作空间的大小"""
-        return self.action_space.n
+        return self.action_space_n.n
 
     def _apply_config(self, core_adj, thread_adj, evict_thr_adj):
         """应用配置变更，将在下一个状态请求时返回"""
