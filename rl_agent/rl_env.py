@@ -5,11 +5,14 @@ import gymnasium as gym
 from gymnasium import spaces
 import grpc
 import logging
+import csv
+import os
+from datetime import datetime
 
 # 导入proto生成的Python模块
 # 根据实际情况调整导入路径
-import rl_agent_pb2
-import rl_agent_pb2_grpc
+from generated import rl_agent_pb2
+from generated import rl_agent_pb2_grpc
 
 # 配置日志
 logging.basicConfig(
@@ -21,7 +24,7 @@ logger = logging.getLogger('FlexChainRL')
 class FlexChainRLEnv(gym.Env):
     """FlexChain强化学习环境类"""
     
-    def __init__(self, server_port=50051, history_length=5):
+    def __init__(self, server_port=50055, history_length=5, data_log_dir='logs/performance_data'):
         super().__init__()
         
         # 初始化参数
@@ -63,10 +66,80 @@ class FlexChainRLEnv(gym.Env):
         self.w1 = 0.6  # 吞吐量变化的权重
         self.w2 = 0.2  # 内存利用率变化的权重
         self.w3 = 0.2  # CPU利用率变化的权重
+
+        # 添加数据记录相关属性
+        self.data_log_dir = data_log_dir
+        self.performance_log_file = None
+        self.performance_csv_writer = None
+        self.start_time = None
+        
+        # 确保日志目录存在
+        os.makedirs(self.data_log_dir, exist_ok=True)
+        
+        # 初始化性能日志文件
+        self._init_performance_log()
         
         # 启动gRPC服务器
         self._start_grpc_server()
         logger.info(f"FlexChain RL环境初始化完成，gRPC服务运行在端口 {self.server_port}")
+
+    def _init_performance_log(self):
+        """初始化性能数据日志文件"""
+        # 创建带有时间戳的日志文件名
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_filename = f'performance_log_{timestamp}.csv'
+        log_path = os.path.join(self.data_log_dir, log_filename)
+        
+        # 创建并打开日志文件
+        self.performance_log_file = open(log_path, 'w', newline='')
+        self.performance_csv_writer = csv.writer(self.performance_log_file)
+        
+        # 写入CSV文件头
+        self.performance_csv_writer.writerow([
+            'timestamp', 'elapsed_seconds', 'ycsb_ops', 'kmeans_ops', 'bank_ops', 
+            'request_total', 'total_ops', 'cpu_utilization', 'memory_utilization',
+            'core_count', 'threads_per_core', 'evict_threshold'
+        ])
+        
+        # 记录开始时间
+        self.start_time = time.time()
+        
+        logger.info(f"性能数据日志已初始化: {log_path}")
+
+    def _log_performance_data(self, state_proto):
+        """记录性能数据到CSV文件"""
+        if self.performance_csv_writer is None:
+            logger.warning("性能数据日志未初始化，无法记录数据")
+            return
+        
+        current_time = time.time()
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        elapsed_seconds = current_time - self.start_time
+        
+        # 计算请求总数
+        request_total = state_proto.ycsb_ops + state_proto.kmeans_ops + state_proto.bank_ops
+        
+        # 记录数据行
+        self.performance_csv_writer.writerow([
+            timestamp,
+            round(elapsed_seconds, 2),
+            state_proto.ycsb_ops,
+            state_proto.kmeans_ops, 
+            state_proto.bank_ops,
+            request_total,
+            state_proto.total_ops,
+            state_proto.cpu_utilization,
+            state_proto.memory_utilization,
+            state_proto.core_count,
+            state_proto.sim_threads_per_core,
+            state_proto.evict_threshold
+        ])
+        
+        # 确保数据被写入文件
+        self.performance_log_file.flush()
+        
+        # 记录日志
+        logger.debug(f"记录性能数据: 时间={timestamp}, 请求总数={request_total}, 完成任务数={state_proto.total_ops}")
 
     def _start_grpc_server(self):
         """启动gRPC服务器用于接收系统状态"""
@@ -141,13 +214,25 @@ class FlexChainRLEnv(gym.Env):
         if len(self.latest_states) > self.history_length:
             self.latest_states = self.latest_states[-self.history_length:]
 
+        # 记录性能数据到CSV文件
+        self._log_performance_data(state_proto)
+
+
     def _get_latest_config(self):
-        """获取最新的系统配置，默认不做任何调整"""
-        config = rl_agent_pb2.SystemConfig()
-        config.core_adjustment = 0
-        config.thread_adjustment = 0
-        config.evict_thr_adjustment = 0
-        return config
+        """获取最新的系统配置"""
+        if hasattr(self, 'current_config'):
+            config = self.current_config
+            # 返回配置后清除，确保只应用一次
+            delattr(self, 'current_config')
+            logger.info(f"返回配置: core_adj={config.core_adjustment}, thread_adj={config.thread_adjustment}, evict_thr_adj={config.evict_thr_adjustment}")
+            return config
+        else:
+            # 默认不做任何调整
+            config = rl_agent_pb2.SystemConfig()
+            config.core_adjustment = 0
+            config.thread_adjustment = 0
+            config.evict_thr_adjustment = 0
+            return config
 
     def _action_to_adjustments(self, action):
         """将动作ID转换为具体的调整参数"""
@@ -184,8 +269,11 @@ class FlexChainRLEnv(gym.Env):
         return observation, info
 
     def step(self, action):
-        """执行一个动作并返回下一个状态、奖励等信息"""
+        """执行一个动作并等待系统响应"""
         self.steps_count += 1
+        
+        # 保存执行动作前的状态
+        pre_action_state = self.current_state.copy() if self.current_state is not None else None
         
         # 将动作ID转换为具体的调整参数
         core_adj, thread_adj, evict_thr_adj = self._action_to_adjustments(action)
@@ -194,21 +282,30 @@ class FlexChainRLEnv(gym.Env):
         # 应用配置变更
         self._apply_config(core_adj, thread_adj, evict_thr_adj)
         
-        # 等待系统状态更新
-        # 注意：在实际应用中，可能需要更复杂的逻辑来同步状态更新
-        time.sleep(5)  # 等待系统响应和状态更新
+        # 动态等待系统状态更新
+        # 使用超时机制确保不会无限等待
+        max_wait_time = 30  # 最长等待30秒
+        start_time = time.time()
+        state_updated = False
         
-        # 检查是否有足够的状态历史来计算奖励
-        if self.last_state is None or self.current_state is None:
-            logger.warning("没有足够的状态历史来计算奖励，返回默认奖励0")
-            reward = 0
-        else:
-            # 计算奖励
-            reward = self._calculate_reward()
+        while not state_updated and (time.time() - start_time < max_wait_time):
+            # 检查是否有新状态到达
+            if self.current_state is not None and not np.array_equal(self.current_state, pre_action_state):
+                state_updated = True
+            else:
+                time.sleep(1)  # 短暂等待后再次检查
         
-        # 检查是否达到终止条件
-        terminated = False  # 在连续环境中通常不会终止
-        truncated = False   # 也不会截断
+        if not state_updated:
+            logger.warning(f"等待状态更新超时 ({max_wait_time}秒)，使用最新可用状态")
+        
+        # 计算奖励
+        reward = self._calculate_reward() if pre_action_state is not None and self.current_state is not None else 0
+        
+        # 在持续环境中，我们定义"完成"的概念
+        # 例如，如果达到预定的步数限制，或者出现特定条件
+        max_steps = 1000  # 示例：最大步数
+        terminated = False
+        truncated = False # self.steps_count >= max_steps
         
         # 返回最新观察、奖励等
         observation = self.latest_states[-1] if self.latest_states else np.zeros(self.observation_space.shape)
@@ -218,9 +315,10 @@ class FlexChainRLEnv(gym.Env):
                 'core': core_adj,
                 'thread': thread_adj,
                 'evict_thr': evict_thr_adj
-            }
+            },
+            'wait_time': time.time() - start_time
         }
-        
+    
         return observation, reward, terminated, truncated, info
 
     def _apply_config(self, core_adj, thread_adj, evict_thr_adj):
@@ -243,7 +341,9 @@ class FlexChainRLEnv(gym.Env):
         T_t1 = s_t1[5]
         
         # 使用请求数作为T_max进行归一化
-        T_max = max(T_t1, 1)  # 避免除以0
+
+        T_max_t = max(s_t[0]+s_t[1]+s_t[2], 1)  # 避免除以0
+        T_max_t1 = max(s_t1[0]+s_t1[1]+s_t1[2], 1)
         
         MU_t = s_t[4]  # memory_utilization
         MU_t1 = s_t1[4]
@@ -253,7 +353,7 @@ class FlexChainRLEnv(gym.Env):
         
         # 计算奖励
         # R_t = w_1(T_{t+1}/T_{max} - T_t/T_{max}) + w_2(MU_{t+1}-MU_t) + w_3(CU_{t+1}-CU_t)
-        throughput_change = (T_t1/T_max) - (T_t/T_max)
+        throughput_change = (T_t1/T_max_t1) - (T_t/T_max_t)
         memory_util_change = MU_t1 - MU_t
         cpu_util_change = CU_t1 - CU_t
         
@@ -265,6 +365,12 @@ class FlexChainRLEnv(gym.Env):
         return reward
 
     def close(self):
+        """关闭环境，停止gRPC服务器，并关闭日志文件"""
+        # 关闭性能日志文件
+        if self.performance_log_file:
+            self.performance_log_file.close()
+            logger.info("性能数据日志文件已关闭")
+            
         """关闭环境，停止gRPC服务器"""
         if self.server:
             self.server.stop(0)

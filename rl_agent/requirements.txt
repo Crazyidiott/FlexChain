@@ -1,0 +1,7 @@
+opencv-python
+plotly
+torch
+tqdm
+gymnasium
+numpy
+pandas
