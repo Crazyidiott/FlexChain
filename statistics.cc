@@ -494,11 +494,13 @@ void* SystemStateManager::CollectionThread(void* arg) {
         // 发送状态到RL agent并应用配置
         // 注意：这里可能想要控制发送频率，不一定每次收集都发送
         // 发送的代码
-        // static int send_counter = 0;
-        // if (++send_counter >= 1) {  // 例如每3次收集发送一次
-        //     manager->SendStatesAndApplyConfig();
-        //     send_counter = 0;
-        // }
+        static int send_counter = 0;
+        if (++send_counter >= 1) {  // 例如每3次收集发送一次
+            log_info(stderr,"fine here");
+            manager->SendStatesAndApplyConfig();
+            log_info(stderr,"get through here");
+            send_counter = 0;
+        }
         
         // 记录日志
         log_info(stderr,
