@@ -65,19 +65,8 @@ class DQN(nn.Module):
                                  nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
       self.conv_output_size = 576
     elif args.architecture == 'selfish_mining':
-      if args.daa == 'btc' or args.daa == "zcash":
         self.linear = nn.Sequential(
-          # state_dim = 5
-          nn.Linear(5, 80),
-          nn.ReLU(),
-          # nn.Linear(80, 80),
-          # nn.ReLU()
-        )
-        self.conv_output_size = 80
-      elif args.daa == 'eth':
-        self.linear = nn.Sequential(
-          # state_dim = 12
-          nn.Linear(12, 80),
+          nn.Linear(9, 80),
           nn.ReLU(),
           # nn.Linear(80, 80),
           # nn.ReLU()
