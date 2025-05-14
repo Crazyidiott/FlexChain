@@ -271,26 +271,15 @@ class ReplayMemoryPrioritized():
   next = __next__  # Alias __next__ for Python 2 compatibility
 
 def createReplayMemory(args, memory_capacity):
-    if args.daa == "eth":
-        Transition_dtype = np.dtype([
+    Transition_dtype = np.dtype([
             ('timestep', np.int32),
-            ('state', np.uint8, (12,)),
+            ('state', np.uint8, (9,)),
             ('action', np.int32),
             ('reward', np.float32),
             ('nonterminal', np.bool_)
         ])
-        blank_trans = (0, np.zeros((12,), dtype=np.uint8), 0, 0.0, False)
-    elif args.daa == "zcash" or args.daa == "btc":
-        Transition_dtype = np.dtype([
-            ('timestep', np.int32),
-            ('state', np.uint8, (5,)),
-            ('action', np.int32),
-            ('reward', np.float32),
-            ('nonterminal', np.bool_)
-        ])
-        blank_trans = (0, np.zeros((5,), dtype=np.uint8), 0, 0.0, False)
-    else:
-        raise ValueError(f"Unsupported DAA type: {args.daa}")
+    blank_trans = (0, np.zeros((9,), dtype=np.uint8), 0, 0.0, False)
+    
 
     if args.prior_mem:
         return ReplayMemoryPrioritized(args, memory_capacity, Transition_dtype, blank_trans)
