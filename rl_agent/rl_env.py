@@ -11,8 +11,8 @@ from datetime import datetime
 
 # 导入proto生成的Python模块
 # 根据实际情况调整导入路径
-import generated.rl_agent_pb2 as rl_agent_pb2
-import generated.rl_agent_pb2_grpc as rl_agent_pb2_grpc
+import rl_agent_pb2
+import rl_agent_pb2_grpc
 
 # 配置日志
 logging.basicConfig(
