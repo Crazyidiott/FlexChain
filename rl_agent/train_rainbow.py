@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import copy
 
 from agent import Agent
-from rl_agent import FlexChainRLEnv
+from rl_env import FlexChainRLEnv
 from memory import createReplayMemory
 from test_rainbow import test_during_training
 
