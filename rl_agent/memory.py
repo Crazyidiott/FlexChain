@@ -116,6 +116,8 @@ class ReplayMemoryRandom():
         self.data = np.array([self.blank_trans] * capacity, dtype=self.Transition_dtype)
 
     def append(self, state, action, reward, terminal):
+        if not isinstance(state, torch.Tensor):
+            state = torch.tensor(state, dtype=torch.float32)   
         state = state.to(dtype=torch.int64, device='cpu')  # 确保是 int64 张量
         self.data[self.index] = (self.t, state.numpy(), action, reward, not terminal)
         self.index = (self.index + 1) % self.capacity

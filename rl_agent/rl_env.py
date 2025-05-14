@@ -277,6 +277,17 @@ class FlexChainRLEnv(gym.Env):
         
         # 将动作ID转换为具体的调整参数
         core_adj, thread_adj, evict_thr_adj = self._action_to_adjustments(action)
+
+        if self.current_state is not None:
+            current_core_count = self.current_state[6]  # core_count的索引
+            if current_core_count + core_adj < 1:  # 确保核心数不少于1
+                logger.warning(f"不可行动作: 当前核心数={current_core_count}, 尝试调整={core_adj}")
+                # 方式1: 返回大的负奖励，但不实际应用动作
+                return self.current_state.copy(), -100.0, False, False, {"invalid_action": True}
+                
+                # 方式2: 修改动作为安全的动作
+                # core_adj = 0  # 或者 core_adj = max(1 - current_core_count, core_adj)
+
         logger.info(f"执行动作: core_adj={core_adj}, thread_adj={thread_adj}, evict_thr_adj={evict_thr_adj}")
         
         # 应用配置变更
@@ -352,7 +363,7 @@ class FlexChainRLEnv(gym.Env):
         MU_t = s_t[4]  # memory_utilization
         MU_t1 = s_t1[4]
         
-        CU_t = s_t[3]  # cpu_utilization / 100.0 转为0-1的范围
+        CU_t = s_t[3] / 100.0  # cpu_utilization / 100.0 转为0-1的范围
         CU_t1 = s_t1[3] / 100.0
         
         # 计算奖励
