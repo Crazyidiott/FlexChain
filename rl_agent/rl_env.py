@@ -321,6 +321,10 @@ class FlexChainRLEnv(gym.Env):
     
         return observation, reward, terminated, truncated, info
 
+    def action_space(self):
+        """返回动作空间的大小"""
+        return self.action_space.n
+
     def _apply_config(self, core_adj, thread_adj, evict_thr_adj):
         """应用配置变更，将在下一个状态请求时返回"""
         # 存储当前的配置，将在下一次SendSystemStates或GetSystemConfig请求时返回
