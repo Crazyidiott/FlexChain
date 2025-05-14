@@ -1,0 +1,273 @@
+# rl_env.py
+import time
+import numpy as np
+import gymnasium as gym
+from gymnasium import spaces
+import grpc
+import logging
+
+# 导入proto生成的Python模块
+# 根据实际情况调整导入路径
+import rl_agent_pb2
+import rl_agent_pb2_grpc
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('FlexChainRL')
+
+class FlexChainRLEnv(gym.Env):
+    """FlexChain强化学习环境类"""
+    
+    def __init__(self, server_port=50051, history_length=5):
+        super().__init__()
+        
+        # 初始化参数
+        self.server_port = server_port
+        self.history_length = history_length
+        self.server = None
+        self.server_thread = None
+        self.latest_states = []
+        self.last_state = None
+        self.current_state = None
+        self.steps_count = 0
+        
+        # 定义动作空间
+        # 核心数调整 {-1, 0, 1}
+        # 线程数调整 {-1, 0, 1}
+        # evict阈值调整 {-1000, -100, 0, 100, 1000}
+        self.core_adjustments = [-1, 0, 1]
+        self.thread_adjustments = [-1, 0, 1]
+        self.evict_thr_adjustments = [-1000, -100, 0, 100, 1000]
+        
+        # 动作空间为三个子空间的笛卡尔积
+        self.action_space = spaces.Discrete(
+            len(self.core_adjustments) * 
+            len(self.thread_adjustments) * 
+            len(self.evict_thr_adjustments)
+        )
+        
+        # 定义观察空间 (状态空间)
+        # 根据SystemState中的字段定义
+        # [ycsb_ops, kmeans_ops, bank_ops, cpu_utilization, memory_utilization, 
+        #  total_ops, core_count, sim_threads_per_core, evict_threshold]
+        self.observation_space = spaces.Box(
+            low=np.array([0, 0, 0, 0, 0, 0, 1, 1, 0]),
+            high=np.array([np.inf, np.inf, np.inf, 100, 1, np.inf, np.inf, np.inf, np.inf]),
+            dtype=np.float32
+        )
+        
+        # 奖励函数的权重
+        self.w1 = 0.6  # 吞吐量变化的权重
+        self.w2 = 0.2  # 内存利用率变化的权重
+        self.w3 = 0.2  # CPU利用率变化的权重
+        
+        # 启动gRPC服务器
+        self._start_grpc_server()
+        logger.info(f"FlexChain RL环境初始化完成，gRPC服务运行在端口 {self.server_port}")
+
+    def _start_grpc_server(self):
+        """启动gRPC服务器用于接收系统状态"""
+        from concurrent import futures
+        import threading
+        
+        # 创建一个实现proto中定义的服务的类
+        class RLAgentServicer(rl_agent_pb2_grpc.RLAgentServicer):
+            def __init__(self, env):
+                self.env = env
+            
+            def SendSystemStates(self, request, context):
+                """接收系统状态并存储"""
+                states = request.states
+                if states:
+                    # 将proto消息转换为内部状态表示
+                    for state in states:
+                        self.env._add_state(state)
+                    
+                    logger.info(f"接收到 {len(states)} 个系统状态")
+                
+                # 获取并返回最新的配置
+                config = self.env._get_latest_config()
+                return config
+            
+            def GetSystemConfig(self, request, context):
+                """返回最新的系统配置"""
+                return self.env._get_latest_config()
+        
+        # 创建gRPC服务器
+        self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        rl_agent_pb2_grpc.add_RLAgentServicer_to_server(
+            RLAgentServicer(self), self.server
+        )
+        
+        # 在指定端口上启动服务器
+        self.server.add_insecure_port(f'[::]:{self.server_port}')
+        self.server.start()
+        
+        # 将服务器放在单独的线程中，避免阻塞主线程
+        def server_thread_func():
+            try:
+                self.server.wait_for_termination()
+            except Exception as e:
+                logger.error(f"gRPC服务器异常: {e}")
+        
+        self.server_thread = threading.Thread(target=server_thread_func)
+        self.server_thread.daemon = True
+        self.server_thread.start()
+
+    def _add_state(self, state_proto):
+        """添加一个新的系统状态到历史中"""
+        # 转换proto消息为numpy数组
+        state_array = np.array([
+            state_proto.ycsb_ops,
+            state_proto.kmeans_ops, 
+            state_proto.bank_ops,
+            state_proto.cpu_utilization,
+            state_proto.memory_utilization,
+            state_proto.total_ops,
+            state_proto.core_count,
+            state_proto.sim_threads_per_core,
+            state_proto.evict_threshold
+        ], dtype=np.float32)
+        
+        # 更新状态
+        self.last_state = self.current_state
+        self.current_state = state_array
+        
+        # 将状态添加到历史中
+        self.latest_states.append(state_array)
+        if len(self.latest_states) > self.history_length:
+            self.latest_states = self.latest_states[-self.history_length:]
+
+    def _get_latest_config(self):
+        """获取最新的系统配置，默认不做任何调整"""
+        config = rl_agent_pb2.SystemConfig()
+        config.core_adjustment = 0
+        config.thread_adjustment = 0
+        config.evict_thr_adjustment = 0
+        return config
+
+    def _action_to_adjustments(self, action):
+        """将动作ID转换为具体的调整参数"""
+        # 计算动作对应的各个维度上的索引
+        n_thread_adj = len(self.thread_adjustments)
+        n_evict_adj = len(self.evict_thr_adjustments)
+        
+        core_idx = action // (n_thread_adj * n_evict_adj)
+        thread_idx = (action % (n_thread_adj * n_evict_adj)) // n_evict_adj
+        evict_idx = action % n_evict_adj
+        
+        # 返回具体的调整值
+        return (
+            self.core_adjustments[core_idx],
+            self.thread_adjustments[thread_idx],
+            self.evict_thr_adjustments[evict_idx]
+        )
+
+    def reset(self, seed=None, options=None):
+        """重置环境状态"""
+        super().reset(seed=seed)
+        
+        # 等待获取初始状态
+        while not self.latest_states:
+            logger.info("等待初始系统状态...")
+            time.sleep(1)
+        
+        self.steps_count = 0
+        
+        # 返回最新状态作为初始观察
+        observation = self.latest_states[-1]
+        info = {}
+        
+        return observation, info
+
+    def step(self, action):
+        """执行一个动作并返回下一个状态、奖励等信息"""
+        self.steps_count += 1
+        
+        # 将动作ID转换为具体的调整参数
+        core_adj, thread_adj, evict_thr_adj = self._action_to_adjustments(action)
+        logger.info(f"执行动作: core_adj={core_adj}, thread_adj={thread_adj}, evict_thr_adj={evict_thr_adj}")
+        
+        # 应用配置变更
+        self._apply_config(core_adj, thread_adj, evict_thr_adj)
+        
+        # 等待系统状态更新
+        # 注意：在实际应用中，可能需要更复杂的逻辑来同步状态更新
+        time.sleep(5)  # 等待系统响应和状态更新
+        
+        # 检查是否有足够的状态历史来计算奖励
+        if self.last_state is None or self.current_state is None:
+            logger.warning("没有足够的状态历史来计算奖励，返回默认奖励0")
+            reward = 0
+        else:
+            # 计算奖励
+            reward = self._calculate_reward()
+        
+        # 检查是否达到终止条件
+        terminated = False  # 在连续环境中通常不会终止
+        truncated = False   # 也不会截断
+        
+        # 返回最新观察、奖励等
+        observation = self.latest_states[-1] if self.latest_states else np.zeros(self.observation_space.shape)
+        info = {
+            'steps': self.steps_count,
+            'last_adjustments': {
+                'core': core_adj,
+                'thread': thread_adj,
+                'evict_thr': evict_thr_adj
+            }
+        }
+        
+        return observation, reward, terminated, truncated, info
+
+    def _apply_config(self, core_adj, thread_adj, evict_thr_adj):
+        """应用配置变更，将在下一个状态请求时返回"""
+        # 存储当前的配置，将在下一次SendSystemStates或GetSystemConfig请求时返回
+        self.current_config = rl_agent_pb2.SystemConfig(
+            core_adjustment=core_adj,
+            thread_adjustment=thread_adj,
+            evict_thr_adjustment=evict_thr_adj
+        )
+
+    def _calculate_reward(self):
+        """计算奖励值，基于状态变化"""
+        # 获取前一个状态和当前状态
+        s_t = self.last_state
+        s_t1 = self.current_state
+        
+        # 提取相关指标
+        T_t = s_t[5]  # total_ops
+        T_t1 = s_t1[5]
+        
+        # 使用请求数作为T_max进行归一化
+        T_max = max(T_t1, 1)  # 避免除以0
+        
+        MU_t = s_t[4]  # memory_utilization
+        MU_t1 = s_t1[4]
+        
+        CU_t = s_t[3]  # cpu_utilization / 100.0 转为0-1的范围
+        CU_t1 = s_t1[3] / 100.0
+        
+        # 计算奖励
+        # R_t = w_1(T_{t+1}/T_{max} - T_t/T_{max}) + w_2(MU_{t+1}-MU_t) + w_3(CU_{t+1}-CU_t)
+        throughput_change = (T_t1/T_max) - (T_t/T_max)
+        memory_util_change = MU_t1 - MU_t
+        cpu_util_change = CU_t1 - CU_t
+        
+        reward = self.w1 * throughput_change + self.w2 * memory_util_change + self.w3 * cpu_util_change
+        
+        logger.info(f"奖励计算: throughput_change={throughput_change}, memory_util_change={memory_util_change}, "
+                   f"cpu_util_change={cpu_util_change}, reward={reward}")
+        
+        return reward
+
+    def close(self):
+        """关闭环境，停止gRPC服务器"""
+        if self.server:
+            self.server.stop(0)
+            logger.info("gRPC服务器已停止")
+            
+        super().close()
