@@ -99,12 +99,12 @@ class KVStableImpl final : public KVStable::Service {
             unsigned long offset = sizeof(uint64_t) * 2 + sizeof(uint8_t) + sizeof(uint32_t) + request->key().length();
             // 计算值的实际部分的偏移量，跳过元数据
 
-            log_info(stderr, "read[key = %s]: complete value = %s", request->key().c_str(), value.c_str());
+            // log_info(stderr, "read[key = %s]: complete value = %s", request->key().c_str(), value.c_str());
 
             actual_value = value.substr(offset);
             // 从完整值中提取实际值
 
-            log_info(stderr, "read[key = %s]: found value = %s.", request->key().c_str(), actual_value.c_str());
+            // log_info(stderr, "read[key = %s]: found value = %s.", request->key().c_str(), actual_value.c_str());
             // 记录信息，显示找到的键和值
         }
         if (s.IsNotFound()) {
