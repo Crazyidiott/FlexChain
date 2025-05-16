@@ -402,7 +402,7 @@ std::vector<SystemState> SystemStateManager::GetHistoryStates(int count) {
 
 bool SystemStateManager::SendStatesAndApplyConfig() {
     // 获取历史状态
-    std::vector<SystemState> states = GetHistoryStates();
+    std::vector<SystemState> states = GetHistoryStates(1);
     if (states.empty()) {
         log_info(stderr, "No states to send to RL agent");
         return false;
