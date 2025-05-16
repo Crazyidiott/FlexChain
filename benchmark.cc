@@ -283,9 +283,9 @@ string get_balance_str(uint64_t balance, size_t length) {
 }
 
 void *client_thread(void *arg) {
-    int trans_per_interval = 1;
-    int interval = 500; // 0.5  ms
-    int min = 60 * 1000 * 2; // 1 min (乘了interval之后)
+    int trans_per_interval = 100;
+    int interval = 50000; // 50  ms
+    int min = 60 * 10 * 2; // 1 min (乘了interval之后)
 
     default_random_engine generator;
     uniform_int_distribution<int> ycsb_distribution(0, YCSB_KEY_NUM - 1);
@@ -308,7 +308,18 @@ void *client_thread(void *arg) {
         }
         if(cnt % (3 * min) == 0 && cnt != 0){
             type = (type + 1) % 3;
-            trans_per_interval = 1;
+            if(type == 0){
+                log_info(stderr, "workload type is YCSB");
+                trans_per_interval = 100; //2000/s
+            }
+            else if(type == 1){
+                log_info(stderr, "workload type is KMEANS");
+                trans_per_interval = 1; //20/s
+            }
+            else if(type == 2){
+                log_info(stderr, "workload type is SMALLBANK");
+                trans_per_interval = 1; //20/s
+            }
         }
         
         cnt ++;
@@ -318,7 +329,7 @@ void *client_thread(void *arg) {
         for (int i = 0; i < trans_per_interval; i++) {
             /* YCSB workload */
             if(type == 0){
-                 struct Request req1;
+                struct Request req1;
                 int number = ycsb_distribution(generator);
                 // int number = kmeans_distribution(generator);
                 // int number = zipf(2.0, key_num);
