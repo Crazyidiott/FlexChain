@@ -72,6 +72,8 @@ class Agent():
 
   # Acts based on single state (no batch)
   def act(self, state):
+    if isinstance(state, np.ndarray):
+        state = torch.tensor(state, dtype=torch.float32)
     if self.evaluate:
       if self.distri:
         return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
