@@ -346,8 +346,8 @@ bool RLAgentClient::GetSystemConfig(SystemConfig& config) {
 }
 
 // SystemStateManager实现
-SystemStateManager::SystemStateManager(int interval_seconds, CoreManager* core_manager)
-    : interval_seconds_(interval_seconds),
+SystemStateManager::SystemStateManager(int interval_milliseconds, CoreManager* core_manager)
+    : interval_milliseconds(interval_milliseconds),
       running_(false),
       core_manager_(core_manager),
       last_ycsb_ops_(0),
@@ -444,16 +444,16 @@ void* SystemStateManager::CollectionThread(void* arg) {
         long current_total_ops = total_ops.load();
         
         // 计算interval内的操作数, 以秒为单位
-        interval_time = manager->interval_milliseconds;
-        interval_ycsb_ops = 1000 * (current_ycsb_ops - manager->last_ycsb_ops_)/interval_time;
-        interval_kmeans_ops = 1000 * (current_kmeans_ops - manager->last_kmeans_ops_)/interval_time;
-        interval_bank_ops = 1000 * (current_bank_ops - manager->last_bank_ops_)/interval_time;
-        interval_total_ops = 1000 * (current_total_ops - manager->last_total_ops_)/interval_time;
+        int interval_time = manager->interval_milliseconds;
+        long interval_ycsb_ops = 1000 * (current_ycsb_ops - manager->last_ycsb_ops_)/interval_time;
+        long interval_kmeans_ops = 1000 * (current_kmeans_ops - manager->last_kmeans_ops_)/interval_time;
+        long interval_bank_ops = 1000 * (current_bank_ops - manager->last_bank_ops_)/interval_time;
+        long interval_total_ops = 1000 * (current_total_ops - manager->last_total_ops_)/interval_time;
  
-        state.set_interval_ycsb_ops(interval_ycsb_ops);
-        state.set_interval_kmeans_ops(interval_kmeans_ops);
-        state.set_interval_bank_ops(interval_bank_ops);
-        state.set_interval_total_ops(interval_total_ops);
+        state.set_ycsb_ops(interval_ycsb_ops);
+        state.set_kmeans_ops(interval_kmeans_ops);
+        state.set_bank_ops(interval_bank_ops);
+        state.set_total_ops(interval_total_ops);
     
         
         // 更新上次计数

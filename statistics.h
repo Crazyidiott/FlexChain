@@ -99,7 +99,7 @@ private:
 class SystemStateManager {
 public:
     //100 ms统计一次
-    SystemStateManager(int interval_seconds = 100, CoreManager* core_manager = nullptr);
+    SystemStateManager(int interval_milliseconds = 100, CoreManager* core_manager = nullptr);
     
     // 启动状态收集线程
     void StartCollection();
@@ -133,7 +133,7 @@ private:
     
     std::deque<SystemState> state_history_;  // 状态历史
     std::mutex state_mutex_;                 // 保护状态历史的互斥锁
-    int interval_seconds_;                   // 收集间隔(秒)
+    int interval_milliseconds;                   // 收集间隔(毫秒)
     pthread_t collection_thread_;            // 收集线程ID
     volatile bool running_;                  // 线程运行标志
     CoreManager* core_manager_;              // CoreManager引用
