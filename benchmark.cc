@@ -284,7 +284,8 @@ string get_balance_str(uint64_t balance, size_t length) {
 
 void *client_thread(void *arg) {
     int trans_per_interval = 1;
-    int interval = 1000;
+    int interval = 500; // 0.5  ms
+    int min = 60 * 1000 * 2; // 1 min (乘了interval之后)
 
     default_random_engine generator;
     uniform_int_distribution<int> ycsb_distribution(0, YCSB_KEY_NUM - 1);
@@ -294,77 +295,95 @@ void *client_thread(void *arg) {
     uniform_int_distribution<int> trans_distribution(0, 4);
     rand_val(1);
     // log_info(stderr,"Get into client thread.");
+    uint32_t type = 0;
+    uint32_t cnt = 0;
 
     while (!end_flag) {
         // log_info(stderr, "get into client thread's while");
         usleep(interval);
 
+        // 3 分钟改一次workload类型
+        if(cnt % min && cnt != 0){
+            trans_per_interval *= 4;
+        }
+        if(cnt % (3 * min) && cnt != 0){
+            type = (type + 1) % 3;
+            trans_per_interval = 1;
+        }
+        
+        cnt ++;
+
+
         for (int i = 0; i < trans_per_interval; i++) {
             /* YCSB workload */
-            struct Request req1;
-            int number = ycsb_distribution(generator);
-            // int number = kmeans_distribution(generator);
-            // int number = zipf(2.0, key_num);
-            req1.key = "key_y_" + to_string(number);
-            req1.value = "value_" + to_string(number);
-            req1.is_prep = false;
-            if (ycsb_pw_distribution(generator)) {
-            // if (kmeans_pw_distribution(generator)) {
-                req1.type = Request::Type::PUT;
-            } else {
-                req1.type = Request::Type::GET;
-            }
-            pthread_mutex_lock(&rq.mutex);
-            rq.rq_queue.push(req1);
-            pthread_mutex_unlock(&rq.mutex);
-            sem_post(&rq.full);
-            YCSB_ops++;
-
-            /* machine learning workload */
-            struct Request req2;
-            if (kmeans_pw_distribution(generator)) {
-                req2.type = Request::Type::KMEANS;
-            } else {
-                req2.type = Request::Type::KM_PUT;
-                int key_number = kmeans_distribution(generator);
-                req2.key = "key_k_" + to_string(key_number);
-                uint64_t val_number = kmeans_distribution(generator);
-                char *buf = (char *)malloc(sizeof(uint64_t));
-                memcpy(buf, &val_number, sizeof(uint64_t));
-                req2.value = string(buf, sizeof(uint64_t));
-                free(buf);
-            }
-            req2.is_prep = false;
-            pthread_mutex_lock(&rq.mutex);
-            rq.rq_queue.push(req2);
-            pthread_mutex_unlock(&rq.mutex);
-            sem_post(&rq.full);
-            KMEANS_ops++;
-
-            /* smallbank workload */
-            struct Request req;
-            if (trans_distribution(generator)) {
-                int transaction = trans_distribution(generator);
-                if (transaction == 0) {
-                    req.type = Request::Type::TransactSavings;
-                } else if (transaction == 1) {
-                    req.type = Request::Type::DepositChecking;
-                } else if (transaction == 2) {
-                    req.type = Request::Type::SendPayment; 
-                } else if (transaction == 3) {
-                    req.type = Request::Type::WriteCheck;
-                } else if (transaction == 4) {
-                    req.type = Request::Type::Amalgamate;
+            if(type == 0){
+                 struct Request req1;
+                int number = ycsb_distribution(generator);
+                // int number = kmeans_distribution(generator);
+                // int number = zipf(2.0, key_num);
+                req1.key = "key_y_" + to_string(number);
+                req1.value = "value_" + to_string(number);
+                req1.is_prep = false;
+                if (ycsb_pw_distribution(generator)) {
+                // if (kmeans_pw_distribution(generator)) {
+                    req1.type = Request::Type::PUT;
+                } else {
+                    req1.type = Request::Type::GET;
                 }
-            } else {
-                req.type = Request::Type::Query;
+                pthread_mutex_lock(&rq.mutex);
+                rq.rq_queue.push(req1);
+                pthread_mutex_unlock(&rq.mutex);
+                sem_post(&rq.full);
+                YCSB_ops++;
             }
-            req.is_prep = false;
-            pthread_mutex_lock(&rq.mutex);
-            rq.rq_queue.push(req);
-            pthread_mutex_unlock(&rq.mutex);
-            sem_post(&rq.full);
-            BANK_ops++;
+            else if(type == 1){
+                /* machine learning workload */
+                struct Request req2;
+                if (kmeans_pw_distribution(generator)) {
+                    req2.type = Request::Type::KMEANS;
+                } else {
+                    req2.type = Request::Type::KM_PUT;
+                    int key_number = kmeans_distribution(generator);
+                    req2.key = "key_k_" + to_string(key_number);
+                    uint64_t val_number = kmeans_distribution(generator);
+                    char *buf = (char *)malloc(sizeof(uint64_t));
+                    memcpy(buf, &val_number, sizeof(uint64_t));
+                    req2.value = string(buf, sizeof(uint64_t));
+                    free(buf);
+                }
+                req2.is_prep = false;
+                pthread_mutex_lock(&rq.mutex);
+                rq.rq_queue.push(req2);
+                pthread_mutex_unlock(&rq.mutex);
+                sem_post(&rq.full);
+                KMEANS_ops++;
+            }
+            else if(type == 2){
+                /* smallbank workload */
+                struct Request req;
+                if (trans_distribution(generator)) {
+                    int transaction = trans_distribution(generator);
+                    if (transaction == 0) {
+                        req.type = Request::Type::TransactSavings;
+                    } else if (transaction == 1) {
+                        req.type = Request::Type::DepositChecking;
+                    } else if (transaction == 2) {
+                        req.type = Request::Type::SendPayment; 
+                    } else if (transaction == 3) {
+                        req.type = Request::Type::WriteCheck;
+                    } else if (transaction == 4) {
+                        req.type = Request::Type::Amalgamate;
+                    }
+                } else {
+                    req.type = Request::Type::Query;
+                }
+                req.is_prep = false;
+                pthread_mutex_lock(&rq.mutex);
+                rq.rq_queue.push(req);
+                pthread_mutex_unlock(&rq.mutex);
+                sem_post(&rq.full);
+                BANK_ops++;
+                }
         }
         // log_info(stderr, "client thread finished one interval.");
     }

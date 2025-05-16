@@ -429,7 +429,7 @@ void* SystemStateManager::CollectionThread(void* arg) {
     
     while (manager->running_) {
         // 睡眠指定间隔
-        sleep(manager->interval_seconds_);
+        usleep(1000 * manager->interval_milliseconds_);
         
         // 创建新的系统状态
         SystemState state;
@@ -443,11 +443,18 @@ void* SystemStateManager::CollectionThread(void* arg) {
         long current_bank_ops = BANK_ops.load();
         long current_total_ops = total_ops.load();
         
-        // 计算interval内的操作数
-        state.set_ycsb_ops(current_ycsb_ops - manager->last_ycsb_ops_);
-        state.set_kmeans_ops(current_kmeans_ops - manager->last_kmeans_ops_);
-        state.set_bank_ops(current_bank_ops - manager->last_bank_ops_);
-        state.set_total_ops(current_total_ops - manager->last_total_ops_);
+        // 计算interval内的操作数, 以秒为单位
+        interval_time = manager->interval_milliseconds;
+        interval_ycsb_ops = 1000 * (current_ycsb_ops - manager->last_ycsb_ops_)/interval_time;
+        interval_kmeans_ops = 1000 * (current_kmeans_ops - manager->last_kmeans_ops_)/interval_time;
+        interval_bank_ops = 1000 * (current_bank_ops - manager->last_bank_ops_)/interval_time;
+        interval_total_ops = 1000 * (current_total_ops - manager->last_total_ops_)/interval_time;
+ 
+        state.set_interval_ycsb_ops(interval_ycsb_ops);
+        state.set_interval_kmeans_ops(interval_kmeans_ops);
+        state.set_interval_bank_ops(interval_bank_ops);
+        state.set_interval_total_ops(interval_total_ops);
+    
         
         // 更新上次计数
         manager->last_ycsb_ops_ = current_ycsb_ops;

@@ -98,7 +98,8 @@ private:
 // 系统状态管理类
 class SystemStateManager {
 public:
-    SystemStateManager(int interval_seconds = 1, CoreManager* core_manager = nullptr);
+    //100 ms统计一次
+    SystemStateManager(int interval_seconds = 100, CoreManager* core_manager = nullptr);
     
     // 启动状态收集线程
     void StartCollection();

@@ -66,6 +66,9 @@ class FlexChainRLEnv(gym.Env):
             dtype=np.float32
         )
         
+        # 让奖励的数值大一点
+        self.scale_factor = 100
+
         # 奖励函数的权重
         self.w1 = 0.6  # 吞吐量变化的权重
         self.w2 = 0.2  # 内存利用率变化的权重
@@ -383,7 +386,7 @@ class FlexChainRLEnv(gym.Env):
         memory_util_change = MU_t1 - MU_t
         cpu_util_change = CU_t1 - CU_t
         
-        reward = self.w1 * throughput_change + self.w2 * memory_util_change + self.w3 * cpu_util_change
+        reward = self.scale_factor * (self.w1 * throughput_change + self.w2 * memory_util_change + self.w3 * cpu_util_change)
         
         logger.info(f"奖励计算: throughput_change={throughput_change}, memory_util_change={memory_util_change}, "
                    f"cpu_util_change={cpu_util_change}, reward={reward}")
