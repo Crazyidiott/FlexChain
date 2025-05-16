@@ -429,7 +429,7 @@ void* SystemStateManager::CollectionThread(void* arg) {
     
     while (manager->running_) {
         // 睡眠指定间隔
-        usleep(1000 * manager->interval_milliseconds_);
+        usleep(1000 * manager->interval_milliseconds);
         
         // 创建新的系统状态
         SystemState state;
