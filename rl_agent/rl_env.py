@@ -286,10 +286,12 @@ class FlexChainRLEnv(gym.Env):
         # 将动作ID转换为具体的调整参数
         core_adj, thread_adj, evict_thr_adj = self._action_to_adjustments(action)
 
+        # 不可用动作筛选
         if self.current_state is not None:
             current_core_count = self.current_state[6]  # core_count的索引
             current_sim_count = self.current_state[7]  # sim_threads_per_core的索引
-            if current_core_count + core_adj < 1:  # 确保核心数不少于1
+            current_evict_thr = self.current_state[8]  # evict_threshold的索引
+            if current_core_count + core_adj < 1 or current_core_count + core_adj > 32:  # 确保核心数不少于1
                 logger.warning(f"不可行动作: 当前核心数={current_core_count}, 尝试调整={core_adj}")
                 # 方式1: 返回大的负奖励，但不实际应用动作
                 return self.current_state.copy(), -100.0, False, False, {"invalid_action": True}
@@ -297,6 +299,10 @@ class FlexChainRLEnv(gym.Env):
                 # core_adj = 0  # 或者 core_adj = max(1 - current_core_count, core_adj)
             if current_sim_count + thread_adj < 1:  # 确保线程数不少于1
                 logger.warning(f"不可行动作: 当前线程数={current_sim_count}, 尝试调整={thread_adj}")
+                # 方式1: 返回大的负奖励，但不实际应用动作
+                return self.current_state.copy(), -100.0, False, False, {"invalid_action": True}
+            if current_evict_thr + evict_thr_adj < 100 or current_evict_thr + evict_thr_adj > 400000 :  # eveict_threshold的范围
+                logger.warning(f"不可行动作: 当前evict_thr={current_evict_thr}, 尝试调整={evict_thr_adj}")
                 # 方式1: 返回大的负奖励，但不实际应用动作
                 return self.current_state.copy(), -100.0, False, False, {"invalid_action": True}
                 

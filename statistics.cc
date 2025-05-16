@@ -503,9 +503,9 @@ void* SystemStateManager::CollectionThread(void* arg) {
         // 发送的代码
         static int send_counter = 0;
         if (++send_counter >= 1) {  // 例如每3次收集发送一次
-            log_info(stderr,"fine here");
+            // log_info(stderr,"fine here");
             manager->SendStatesAndApplyConfig();
-            log_info(stderr,"get through here");
+            // log_info(stderr,"get through here");
             send_counter = 0;
         }
         

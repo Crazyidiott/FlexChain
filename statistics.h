@@ -99,7 +99,7 @@ private:
 class SystemStateManager {
 public:
     //100 ms统计一次
-    SystemStateManager(int interval_milliseconds = 100, CoreManager* core_manager = nullptr);
+    SystemStateManager(int interval_milliseconds = 1000, CoreManager* core_manager = nullptr);
     
     // 启动状态收集线程
     void StartCollection();
