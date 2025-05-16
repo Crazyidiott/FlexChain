@@ -5,6 +5,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import grpc
 import logging
+import threading
 import csv
 import os
 from datetime import datetime
@@ -35,7 +36,10 @@ class FlexChainRLEnv(gym.Env):
         self.latest_states = []
         self.last_state = None
         self.current_state = None
+        self.current_ts = 0
+        self.last_ts = 0
         self.steps_count = 0
+        self.state_condition = threading.Condition()
         
         # 定义动作空间
         # 核心数调整 {-1, 0, 1}
@@ -208,6 +212,7 @@ class FlexChainRLEnv(gym.Env):
         # 更新状态
         self.last_state = self.current_state
         self.current_state = state_array
+        self.current_ts = state_proto.timestamp
         
         # 将状态添加到历史中
         self.latest_states.append(state_array)
@@ -301,8 +306,9 @@ class FlexChainRLEnv(gym.Env):
         
         while not state_updated and (time.time() - start_time < max_wait_time):
             # 检查是否有新状态到达
-            if self.current_state is not None and not np.array_equal(self.current_state, pre_action_state):
+            if self.current_state is not None and not self.last_ts == self.current_ts:
                 state_updated = True
+                self.last_ts = self.current_ts
             else:
                 time.sleep(1)  # 短暂等待后再次检查
         
