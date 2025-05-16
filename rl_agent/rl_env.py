@@ -35,7 +35,7 @@ class FlexChainRLEnv(gym.Env):
         self.server_thread = None
         self.latest_states = []
         self.last_state = None
-        self.current_state = None
+        self.current_state = np.array([0, 0, 0, 0, 0, 0, 1, 1, 0], dtype=np.float32)
         self.current_ts = 0
         self.last_ts = 0
         self.steps_count = 0
@@ -61,7 +61,7 @@ class FlexChainRLEnv(gym.Env):
         # [ycsb_ops, kmeans_ops, bank_ops, cpu_utilization, memory_utilization, 
         #  total_ops, core_count, sim_threads_per_core, evict_threshold]
         self.observation_space = spaces.Box(
-            low=np.array([0, 0, 0, 0, 0, 0, 1, 1, 0]),
+            low=np.array([0, 0, 0, 0, 0, 0, 1, 1, 400000]),
             high=np.array([np.inf, np.inf, np.inf, 100, 1, np.inf, np.inf, np.inf, np.inf]),
             dtype=np.float32
         )
