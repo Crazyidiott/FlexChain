@@ -312,6 +312,7 @@ void *client_thread(void *arg) {
         }
         
         cnt ++;
+        log_info(stderr, "benchmark type is %d",type);
 
 
         for (int i = 0; i < trans_per_interval; i++) {

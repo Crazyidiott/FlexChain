@@ -445,11 +445,11 @@ void* SystemStateManager::CollectionThread(void* arg) {
         long current_total_ops = total_ops.load();
         
         // 计算interval内的操作数, 以秒为单位
-        int interval_time = manager->interval_milliseconds;
-        long interval_ycsb_ops = 1000 * (current_ycsb_ops - manager->last_ycsb_ops_)/interval_time;
-        long interval_kmeans_ops = 1000 * (current_kmeans_ops - manager->last_kmeans_ops_)/interval_time;
-        long interval_bank_ops = 1000 * (current_bank_ops - manager->last_bank_ops_)/interval_time;
-        long interval_total_ops = 1000 * (current_total_ops - manager->last_total_ops_)/interval_time;
+        int interval_time = 1;
+        long interval_ycsb_ops =  (current_ycsb_ops - manager->last_ycsb_ops_)/interval_time;
+        long interval_kmeans_ops =  (current_kmeans_ops - manager->last_kmeans_ops_)/interval_time;
+        long interval_bank_ops =  (current_bank_ops - manager->last_bank_ops_)/interval_time;
+        long interval_total_ops = (current_total_ops - manager->last_total_ops_)/interval_time;
  
         state.set_ycsb_ops(interval_ycsb_ops);
         state.set_kmeans_ops(interval_kmeans_ops);

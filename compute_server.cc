@@ -1161,7 +1161,7 @@ pthread_t CoreManager::create_thread(int core_id, bool is_simulation) {
         pthread_create(&tid, NULL, validation_handler, ctx);
     }
     
-    log_info(stderr, "tid is: %lu, context_id is %d", tid, context_index);
+    // log_info(stderr, "tid is: %lu, context_id is %d", tid, context_index);
     
     // 设置CPU亲和性
     cpu_set_t cpuset;
@@ -1198,7 +1198,7 @@ void CoreManager::stop_thread(pthread_t tid) {
     
     // 等待线程完成
     pthread_join(tid, NULL);
-    log_info(stderr, "thread %lu stopped", (unsigned long)tid);
+    // log_info(stderr, "thread %lu stopped", (unsigned long)tid);
     
     // 释放上下文和映射
     context_in_use[context_index] = false;
@@ -1395,7 +1395,7 @@ int CoreManager::remove_core(int core_id) {
     // Stop all simulation threads for this core
     log_info(stderr, "size of sim_threads_by_core: %d", sim_threads_by_core[core_id].size());
     for (pthread_t tid : sim_threads_by_core[core_id]) {
-        log_info(stderr, "Stopping simulation thread %lu\n", tid);
+        // log_info(stderr, "Stopping simulation thread %lu\n", tid);
         int ctx_index = thread_to_context_index[tid];
         stop_thread(tid);
     }

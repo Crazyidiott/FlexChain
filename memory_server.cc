@@ -26,7 +26,7 @@ Status MemoryConfigServiceImpl::SetEvictThreshold(ServerContext* context, const 
     EVICT_THR = request->threshold();
     response->set_threshold(EVICT_THR);
     response->set_success(true);
-    log_info(stderr, "Setting EVICT_THR to %u", EVICT_THR);
+    // log_info(stderr, "Setting EVICT_THR to %u", EVICT_THR);
     pthread_mutex_unlock(&evict_thr_mutex);
     return Status::OK;
 }

@@ -58,7 +58,7 @@ class CoreManager {
                 pthread_create(&tid, NULL, validation_handler, ctx);
             }
 
-            log_info(stderr, "tid is: %lu, context_id is %d", tid, context_index);
+            // log_info(stderr, "tid is: %lu, context_id is %d", tid, context_index);
 
             // 设置CPU亲和性
             cpu_set_t cpuset;
