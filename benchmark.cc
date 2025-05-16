@@ -303,16 +303,16 @@ void *client_thread(void *arg) {
         usleep(interval);
 
         // 3 分钟改一次workload类型
-        if(cnt % min && cnt != 0){
+        if(cnt % min == 0 && cnt != 0){
             trans_per_interval *= 4;
         }
-        if(cnt % (3 * min) && cnt != 0){
+        if(cnt % (3 * min) == 0 && cnt != 0){
             type = (type + 1) % 3;
             trans_per_interval = 1;
         }
         
         cnt ++;
-        log_info(stderr, "benchmark type is %d",type);
+        // log_info(stderr, "benchmark type is %d",type);
 
 
         for (int i = 0; i < trans_per_interval; i++) {
