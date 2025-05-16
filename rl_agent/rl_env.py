@@ -298,7 +298,7 @@ class FlexChainRLEnv(gym.Env):
                 # 方式2: 修改动作为安全的动作
                 # core_adj = 0  # 或者 core_adj = max(1 - current_core_count, core_adj)
             if current_sim_count + thread_adj < 1 or current_sim_count * current_core_count > 31:  # 确保线程数不少于1
-                logger.warning(f"不可行动作: 当前线程数={current_sim_count}, 尝试调整={thread_adj}")
+                logger.warning(f"不可行动作: 当前线程数={current_sim_count},尝试调整thread={core_adj}, 尝试调整core={thread_adj}")
                 # 方式1: 返回大的负奖励，但不实际应用动作
                 return self.current_state.copy(), -100.0, False, False, {"invalid_action": True}
             if current_evict_thr + evict_thr_adj < 100 or current_evict_thr + evict_thr_adj > 400000 :  # eveict_threshold的范围
