@@ -64,8 +64,8 @@ class KVStableImpl final : public KVStable::Service {
                 if ((i + 1) % 4 == 0) hex_stream << " "; // 每4个字节一个空格，增强可读性
             }
             // log_info(stderr, "write[key = %s]: binary value (first 30 bytes): %s%s", 
-                    it->first.c_str(), hex_stream.str().c_str(), 
-                    it->second.size() > 30 ? "..." : "");
+                    // it->first.c_str(), hex_stream.str().c_str(), 
+                    // it->second.size() > 30 ? "..." : "");
 
             log_debug(stderr, "write[key = %s]: value = %s is add to the batch.", it->first.c_str(), actual_value.c_str());
             // 记录调试信息，显示添加到批处理的键和值
