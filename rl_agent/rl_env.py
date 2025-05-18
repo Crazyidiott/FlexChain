@@ -40,6 +40,7 @@ class FlexChainRLEnv(gym.Env):
         self.last_ts = 0
         self.steps_count = 0
         self.state_condition = threading.Condition()
+        self.processing = False
         
         # 定义动作空间
         # 核心数调整 {-1, 0, 1}
@@ -166,8 +167,8 @@ class FlexChainRLEnv(gym.Env):
                     for state in states:
                         self.env._add_state(state)
                     
-                    logger.info(f"接收到 {len(states)} 个系统状态")
-                
+                    logger.info(f"\n接收到 {len(states)} 个系统状态")
+                self.processing = True
                 # 获取并返回最新的配置
                 config = self.env._get_latest_config()
                 return config
@@ -228,6 +229,9 @@ class FlexChainRLEnv(gym.Env):
 
     def _get_latest_config(self):
         """获取最新的系统配置"""
+        while self.processing:
+            time.sleep(0.1)
+        # return self.current_config
         if hasattr(self, 'current_config'):
             config = self.current_config
             # 返回配置后清除，确保只应用一次
@@ -309,7 +313,7 @@ class FlexChainRLEnv(gym.Env):
                 evict_thr_adj = 0
                 
 
-        logger.info(f"执行动作: core_adj={core_adj}, thread_adj={thread_adj}, evict_thr_adj={evict_thr_adj}")
+        logger.info(f"执行动作: core_adj={core_adj}, thread_adj={thread_adj}, evict_thr_adj={evict_thr_adj}\n当前状态={self.current_state}")
         
         # 应用配置变更
         self._apply_config(core_adj, thread_adj, evict_thr_adj)
@@ -366,6 +370,7 @@ class FlexChainRLEnv(gym.Env):
             thread_adjustment=thread_adj,
             evict_thr_adjustment=evict_thr_adj
         )
+        self.processing = False
 
     def _calculate_reward(self):
         """计算奖励值，基于状态变化"""

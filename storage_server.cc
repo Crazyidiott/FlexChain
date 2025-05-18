@@ -54,7 +54,7 @@ class KVStableImpl final : public KVStable::Service {
             actual_value = it->second.substr(offset);
             // 从完整值中提取实际值部分，去除元数据
 
-            log_info(stderr, "write[key = %s]: complete value = %s", it->first.c_str(), it->second.c_str());
+            // log_info(stderr, "write[key = %s]: complete value = %s", it->first.c_str(), it->second.c_str());
             
             std::stringstream hex_stream;
             hex_stream << "0x";
@@ -63,7 +63,7 @@ class KVStableImpl final : public KVStable::Service {
                         << static_cast<int>(static_cast<unsigned char>(it->second[i]));
                 if ((i + 1) % 4 == 0) hex_stream << " "; // 每4个字节一个空格，增强可读性
             }
-            log_info(stderr, "write[key = %s]: binary value (first 30 bytes): %s%s", 
+            // log_info(stderr, "write[key = %s]: binary value (first 30 bytes): %s%s", 
                     it->first.c_str(), hex_stream.str().c_str(), 
                     it->second.size() > 30 ? "..." : "");
 

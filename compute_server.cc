@@ -1341,7 +1341,7 @@ int CoreManager::add_core(int core_id) {
         current_total_threads += sim_threads_by_core[core].size() + val_threads_by_core[core].size();
     }
     
-    if (current_total_threads + total_threads_needed > max_available_threads) {
+    if (current_total_threads + total_threads_needed >= max_available_threads) {
         std::cerr << "Not enough thread contexts available!" << std::endl;
         return -2;
     }
@@ -1431,7 +1431,7 @@ int CoreManager::adjust_thread(int d_sim, int d_val) {
     int total_new_threads_per_core = new_sim_count + new_val_count;
     int new_total_threads = total_new_threads_per_core * active_cores.size();
     
-    if (new_total_threads > max_available_threads) {
+    if (new_total_threads >= max_available_threads) {
         std::cerr << "Not enough thread contexts available for adjustment!" << std::endl;
         return -2;
     }

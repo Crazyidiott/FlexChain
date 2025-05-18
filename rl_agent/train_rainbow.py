@@ -73,8 +73,8 @@ parser.add_argument('--server-port', type=int, default=50055, help='gRPC服务�
 parser.add_argument('--results-dir', type=str, default='results', help='Directory to store results')
 
 # 交替训练与评估的相关参数
-parser.add_argument('--train-duration', type=int, default=14400, help='Training phase duration in seconds (default: 4 hours)')
-parser.add_argument('--eval-duration', type=int, default=3600, help='Evaluation phase duration in seconds (default: 1 hour)')
+parser.add_argument('--train-duration', type=int, default=1200, help='Training phase duration in seconds (default: 20 mins)')
+parser.add_argument('--eval-duration', type=int, default=600, help='Evaluation phase duration in seconds (default: 10mins   )')
 parser.add_argument('--performance-threshold', type=float, default=1.05, help='Improvement threshold to save new best model (default: 5%)')
 parser.add_argument('--degradation-threshold', type=float, default=0.9, help='Degradation threshold to rollback to best model (default: 10%)')
 
