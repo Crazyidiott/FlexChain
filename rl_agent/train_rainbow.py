@@ -320,6 +320,8 @@ def main():
                 action = dqn.act(state, evaluate=True)  # 评估模式，确定性动作
             
             # 执行动作
+            while not env.processing:
+                time.sleep(0.1)  # 等待环境处理
             next_state, reward, done, truncated, info = env.step(action)
             
             # 记录性能（仅在评估阶段）
@@ -354,6 +356,7 @@ def main():
                     # 保存检查点
                     if args.checkpoint_interval > 0 and T % args.checkpoint_interval == 0:
                         checkpoint_path = os.path.join(results_dir, f'checkpoint_{T}.pth')
+                        os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
                         dqn.save(checkpoint_path)
                         log(args.log_file, f'Checkpoint saved at step {T}: {checkpoint_path}')
             
@@ -372,6 +375,7 @@ def main():
         
         # 保存最终模型和内存
         final_model_path = os.path.join(results_dir, 'final_model.pth')
+        os.makedirs(os.path.dirname(final_model_path), exist_ok=True)
         dqn.save(final_model_path)
         save_memory(mem, args.memory, args.disable_bzip_memory)
         
@@ -383,6 +387,7 @@ def main():
         
         # 保存中断时的模型和内存
         interrupted_model_path = os.path.join(results_dir, 'interrupted_model.pth')
+        os.makedirs(os.path.dirname(interrupted_model_path), exist_ok=True)
         dqn.save(interrupted_model_path)
         save_memory(mem, args.memory, args.disable_bzip_memory)
         

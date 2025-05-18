@@ -168,7 +168,7 @@ class FlexChainRLEnv(gym.Env):
                         self.env._add_state(state)
                     
                     logger.info(f"\n接收到 {len(states)} 个系统状态")
-                self.processing = True
+                self.env.processing = True
                 # 获取并返回最新的配置
                 config = self.env._get_latest_config()
                 return config
