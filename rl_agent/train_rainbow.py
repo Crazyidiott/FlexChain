@@ -317,7 +317,7 @@ def main():
                 action = dqn.act(state)  # 训练模式，可能包含探索
                 dqn.update_epsilon()  # 更新epsilon
             else:
-                action = dqn.act(state, evaluate=True)  # 评估模式，确定性动作
+                action = dqn.act(state)  # 评估模式，确定性动作
             
             # 执行动作
             while not env.processing:

@@ -180,6 +180,8 @@ class Agent():
     
   def train(self):
     self.online_net.train()
+    self.evaluate = False
 
   def eval(self):
     self.online_net.eval()
+    self.evaluate = True
