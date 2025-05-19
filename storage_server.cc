@@ -9,6 +9,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 //for test
 #include <iomanip>

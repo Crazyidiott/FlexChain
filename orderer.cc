@@ -15,6 +15,7 @@ atomic<bool> ready_flag = false;
 atomic<bool> end_flag = false;
 atomic<long> total_ops = 0;
 
+
 bool has_rw_conflicts(int target_trans, int current_trans,
                       const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
     if (read_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {

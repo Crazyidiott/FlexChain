@@ -22,6 +22,9 @@
 #include <chrono>
 #include <random>
 #include <unordered_set>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "blockchain.grpc.pb.h"
 
