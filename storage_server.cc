@@ -32,7 +32,19 @@ class KVStableImpl final : public KVStable::Service {
    // 这是一个继承自 KVStable::Service 的最终类，不能被进一步继承
    // 实现了 KVStable 服务的具体功能，这个服务是通过 gRPC 定义的
     public:
-    explicit KVStableImpl() : block_store("blockchain.log", std::ios::out | std::ios::binary) {}
+    explicit KVStableImpl() : block_store("blockchain.log", std::ios::out | std::ios::binary) {
+        max_log_size = 5 * 1024 * 1024 * 1024; // 5GB
+        max_log_files = 3; // 保留3个历史日志
+        current_log_size = 0;
+
+        // 检查日志文件是否已存在，获取当前大小
+        struct stat file_stat;
+        if (stat("blockchain.log", &file_stat) == 0) {
+            current_log_size = file_stat.st_size;
+        }
+        
+        log_info(stderr, "Storage server started. Max log size: %lu bytes, max log files: %d", max_log_size, max_log_files);
+    }
     // 构造函数，初始化 block_store 文件流，用于将区块链数据存储到名为"blockchain.log"的文件中
     // 以二进制和输出模式打开文件
     Status write_sstables(ServerContext* context, const EvictedBuffers* request, EvictionResponse* response) override {
@@ -128,6 +140,10 @@ class KVStableImpl final : public KVStable::Service {
         std::string serialised_block;
         request->SerializeToString(&serialised_block);
         uint32_t size = serialised_block.size();
+        // 检查是否需要轮转日志
+        if (current_log_size + sizeof(uint32_t) + size > max_log_size) {
+            rotate_log();
+        }
         block_store.write((char *)&size, sizeof(uint32_t));
         block_store.write(serialised_block.c_str(), size);
         block_store.flush();
@@ -135,7 +151,49 @@ class KVStableImpl final : public KVStable::Service {
         return Status::OK;
     }
     private:
-     std::ofstream block_store;
+        std::ofstream block_store;
+        size_t max_log_size;    // 最大日志文件大小
+        size_t current_log_size; // 当前日志文件大小
+        int max_log_files;      // 最大保留的日志文件数量
+        // 日志轮转函数
+        void rotate_log() {
+            log_info(stderr, "Starting log rotation. Current size: %lu bytes", current_log_size);
+            
+            // 关闭当前日志文件
+            block_store.close();
+            
+            // 删除最老的日志文件（如果超过最大数量）
+            std::string oldest_log = "blockchain.log." + std::to_string(max_log_files);
+            if (std::filesystem::exists(oldest_log)) {
+                std::filesystem::remove(oldest_log);
+                log_info(stderr, "Removed oldest log file: %s", oldest_log.c_str());
+            }
+            
+            // 重命名现有的日志文件，从最老的开始
+            for (int i = max_log_files - 1; i >= 1; i--) {
+                std::string old_name = "blockchain.log." + std::to_string(i);
+                std::string new_name = "blockchain.log." + std::to_string(i + 1);
+                if (std::filesystem::exists(old_name)) {
+                    std::filesystem::rename(old_name, new_name);
+                    log_info(stderr, "Renamed %s to %s", old_name.c_str(), new_name.c_str());
+                }
+            }
+            
+            // 重命名当前日志文件
+            std::filesystem::rename("blockchain.log", "blockchain.log.1");
+            log_info(stderr, "Renamed blockchain.log to blockchain.log.1");
+            
+            // 打开新的日志文件
+            block_store.open("blockchain.log", std::ios::out | std::ios::binary);
+            if (!block_store.is_open()) {
+                log_err("Failed to open new log file after rotation");
+            }
+            
+            // 重置当前日志大小
+            current_log_size = 0;
+            
+            log_info(stderr, "Log rotation completed, created new blockchain.log");
+        }
 };
 
 void run_server(const std::string& db_name, const std::string& server_address) {

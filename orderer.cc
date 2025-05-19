@@ -86,9 +86,47 @@ void *block_formation_thread(void *arg) {
         // log_info(stderr, "block formation thread: channel for validator is in ready state.");
         stub = ComputeComm::NewStub(channel);
     }
+
+    // 打开日志文件函数
+    auto open_current_log_file = [](const string& path) -> ifstream {
+        ifstream logi(path, ios::in | ios::binary);
+        if (!logi.is_open()) {
+            log_err("Failed to open log file: %s", path.c_str());
+        }
+        return logi;
+    };
+
     std::string log_file_path = "./consensus/raft.log";
-    ifstream logi("./consensus/raft.log", ios::in);
-    assert(logi.is_open());
+    ifstream logi = open_current_log_file(log_file_path);
+    // std::string log_file_path = "./consensus/raft.log";
+    // ifstream logi("./consensus/raft.log", ios::in);
+    // assert(logi.is_open());
+
+    // 重新打开文件函数
+    auto reopen_log_file = [&](bool check_rotated = true) {
+        logi.close();
+        
+        // 如果需要，检查是否存在轮转后的文件
+        if (check_rotated) {
+            string rotated_log = "./consensus/raft.log.1";
+            if (std::filesystem::exists(rotated_log)) {
+                // 获取当前读取位置相对于文件大小的比例
+                struct stat current_stat, rotated_stat;
+                if (stat(log_file_path.c_str(), &current_stat) == 0 && 
+                    stat(rotated_log.c_str(), &rotated_stat) == 0) {
+                    // 如果我们接近当前文件的末尾，切换到轮转后的文件
+                    if (logi.tellg() > current_stat.st_size - 1024) {
+                        log_info(stderr, "Switching to rotated log file");
+                        log_file_path = rotated_log;
+                    }
+                }
+            }
+        }
+        
+        logi = open_current_log_file(log_file_path);
+    };
+
+
 
     unsigned long last_applied = 0;
     int majority = follower_grpc_endpoints.size() / 2;
@@ -147,6 +185,16 @@ void *block_formation_thread(void *arg) {
 
             // 判断是否可以读取size
             if (current_read_pos + sizeof(uint32_t) > file_size) {
+                 // 检查是否存在轮转后的新日志文件
+                string new_log = "./consensus/raft.log";
+                if (log_file_path != new_log && std::filesystem::exists(new_log)) {
+                    // 如果当前使用的是旧的日志文件，并且新的日志文件已创建，切换到新文件
+                    log_info(stderr, "Switching to new log file after rotation");
+                    log_file_path = new_log;
+                    reopen_log_file(false);
+                    continue;
+                }
+
                 // size都读不了，说明写线程没写完，等
                 std::this_thread::sleep_for(std::chrono::microseconds(10));
                 continue;
@@ -164,6 +212,15 @@ void *block_formation_thread(void *arg) {
             // 判断是否可以读取size字节
             current_read_pos = logi.tellg(); // 更新读指针
             if (current_read_pos + size > file_size) {
+                // 检查是否需要切换到新文件
+                string new_log = "./consensus/raft.log";
+                if (log_file_path != new_log && std::filesystem::exists(new_log)) {
+                    log_info(stderr, "Switching to new log file after rotation");
+                    log_file_path = new_log;
+                    reopen_log_file(false);
+                    continue;
+                }
+
                 // 说明size部分还没写完
                 // 回退
                 logi.seekg(-(std::streamoff)sizeof(uint32_t), std::ios::cur);
@@ -255,13 +312,28 @@ void *block_formation_thread(void *arg) {
 
 class ConsensusCommImpl final : public ConsensusComm::Service {
    public:
-    explicit ConsensusCommImpl() : logoo("./consensus/raft.log", ios::out | ios::binary) {}
+    explicit ConsensusCommImpl() : logoo("./consensus/raft.log", ios::out | ios::binary) {
+        max_log_size = 1024 * 1024 * 1024; // 1GB
+        max_log_files = 5; // 保留5个历史日志
+        current_log_size = 0;
+        struct stat file_stat;
+        if (stat("./consensus/raft.log", &file_stat) == 0) {
+            current_log_size = file_stat.st_size;
+        }
+    }
+    
 
     /* implementation of AppendEntriesRPC */
     Status append_entries(ServerContext *context, const AppendRequest *request, AppendResponse *response) override {
         int i = 0;
         for (; i < request->log_entries_size(); i++) {
             uint32_t size = request->log_entries(i).size();
+
+            // 检查是否需要轮转日志
+            if (current_log_size + sizeof(uint32_t) + size > max_log_size) {
+                rotate_log();
+            }
+
             logoo.write((char *)&size, sizeof(uint32_t));
             logoo.write(request->log_entries(i).c_str(), size);
             last_log_index++;
@@ -304,6 +376,43 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
 
    private:
     ofstream logoo;
+    size_t max_log_size;  // 最大日志文件大小
+    size_t current_log_size;  // 当前日志文件大小
+    int max_log_files;  // 最大保留的日志文件数量
+    // 日志轮转函数
+    void rotate_log() {
+        // 关闭当前日志文件
+        logoo.close();
+        
+        // 删除最老的日志文件（如果超过最大数量）
+        string oldest_log = "./consensus/raft.log." + to_string(max_log_files);
+        if (std::filesystem::exists(oldest_log)) {
+            std::filesystem::remove(oldest_log);
+        }
+        
+        // 重命名现有的日志文件，从最老的开始
+        for (int i = max_log_files - 1; i >= 1; i--) {
+            string old_name = "./consensus/raft.log." + to_string(i);
+            string new_name = "./consensus/raft.log." + to_string(i + 1);
+            if (std::filesystem::exists(old_name)) {
+                std::filesystem::rename(old_name, new_name);
+            }
+        }
+        
+        // 重命名当前日志文件
+        std::filesystem::rename("./consensus/raft.log", "./consensus/raft.log.1");
+        
+        // 打开新的日志文件
+        logoo.open("./consensus/raft.log", ios::out | ios::binary);
+        if (!logoo.is_open()) {
+            log_err("Failed to open new log file after rotation");
+        }
+        
+        // 重置当前日志大小
+        current_log_size = 0;
+        
+        log_info(stderr, "Log rotation completed, created new raft.log");
+    }
 };
 
 void run_leader(const std::string &server_address, std::string configfile) {
@@ -312,6 +421,9 @@ void run_leader(const std::string &server_address, std::string configfile) {
 
     ofstream logo("./consensus/raft.log", ios::out | ios::binary);
     assert(logo.is_open());
+    size_t max_log_size = 1024 * 1024 * 1024; // 1GB
+    size_t current_log_size = 0;
+    int max_log_files = 5;
 
     pthread_t block_form_tid;
     pthread_create(&block_form_tid, NULL, block_formation_thread, &configfile);
@@ -339,12 +451,58 @@ void run_leader(const std::string &server_address, std::string configfile) {
     log_info(stderr, "RPC server listening on %s", server_address.c_str());
 
     ready_flag = true;
+    auto rotate_log = [&]() {
+        // 关闭当前日志文件
+        logo.close();
+        
+        // 删除最老的日志文件（如果超过最大数量）
+        string oldest_log = "./consensus/raft.log." + to_string(max_log_files);
+        if (std::filesystem::exists(oldest_log)) {
+            std::filesystem::remove(oldest_log);
+        }
+        
+        // 重命名现有的日志文件，从最老的开始
+        for (int i = max_log_files - 1; i >= 1; i--) {
+            string old_name = "./consensus/raft.log." + to_string(i);
+            string new_name = "./consensus/raft.log." + to_string(i + 1);
+            if (std::filesystem::exists(old_name)) {
+                std::filesystem::rename(old_name, new_name);
+            }
+        }
+        
+        // 重命名当前日志文件
+        std::filesystem::rename("./consensus/raft.log", "./consensus/raft.log.1");
+        
+        // 打开新的日志文件
+        logo.open("./consensus/raft.log", ios::out | ios::binary);
+        if (!logo.is_open()) {
+            log_err("Failed to open new log file after rotation");
+        }
+        
+        // 重置当前日志大小
+        current_log_size = 0;
+        
+        log_info(stderr, "Log rotation completed, created new raft.log");
+    };
 
     while (true) {
         pthread_mutex_lock(&tq.mutex);
         int i = 0;
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
             uint32_t size = tq.trans_queue.front().size();
+
+            // 检查是否需要轮转日志
+            if (current_log_size + sizeof(uint32_t) + size > max_log_size) {
+                pthread_mutex_unlock(&tq.mutex); // 先解锁，避免长时间持有锁
+                rotate_log();
+                pthread_mutex_lock(&tq.mutex); // 再次获取锁，继续处理
+                
+                // 重新检查队列，因为在轮转过程中可能已经改变
+                if (tq.trans_queue.empty()) {
+                    break;
+                }
+                size = tq.trans_queue.front().size();
+            }
 
             // std::cout << "Before write: tellP=" << logo.tellp() << std::endl;  
             logo.write((char *)&size, sizeof(uint32_t));
