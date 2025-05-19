@@ -314,7 +314,7 @@ void *block_formation_thread(void *arg) {
 class ConsensusCommImpl final : public ConsensusComm::Service {
    public:
     explicit ConsensusCommImpl() : logoo("./consensus/raft.log", ios::out | ios::binary) {
-        max_log_size = 1024 * 1024 * 1024; // 1GB
+        max_log_size = static_cast<uint64_t>(1024) * 1024 * 1024; // 1GB
         max_log_files = 5; // 保留5个历史日志
         current_log_size = 0;
         struct stat file_stat;
