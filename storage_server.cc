@@ -149,6 +149,7 @@ class KVStableImpl final : public KVStable::Service {
         }
         block_store.write((char *)&size, sizeof(uint32_t));
         block_store.write(serialised_block.c_str(), size);
+        current_log_size += sizeof(uint32_t) + size;
         block_store.flush();
 
         return Status::OK;

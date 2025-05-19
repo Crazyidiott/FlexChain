@@ -337,6 +337,8 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
 
             logoo.write((char *)&size, sizeof(uint32_t));
             logoo.write(request->log_entries(i).c_str(), size);
+
+            current_log_size += sizeof(uint32_t) + size;
             last_log_index++;
         }
         logoo.flush();
@@ -511,6 +513,8 @@ void run_leader(const std::string &server_address, std::string configfile) {
 
             
             logo.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
+
+            current_log_size += sizeof(uint32_t) + size;
 
             tq.trans_queue.pop();
         }
