@@ -780,8 +780,18 @@ void *validation_handler(void *arg) {
     time_t last_health_check = time(NULL);
 
     while (!ctx->end_flag) {
+        log_info(stderr, "WAIT: validation_handler[%d] waiting for blocks...", ctx->thread_index);
         sem_wait(&bq.full);
+        log_info(stderr, "WAKE: validation_handler[%d] woke up after sem_wait", ctx->thread_index);
         pthread_mutex_lock(&bq.mutex);
+
+        pthread_mutex_lock(&bq.mutex);
+        if (bq.bq_queue.empty()) {
+            log_warn(stderr, "EMPTY: validation_handler[%d] woke up but queue is empty!", ctx->thread_index);
+            pthread_mutex_unlock(&bq.mutex);
+            continue;
+        }
+
         Block block = bq.bq_queue.front();
         // log_info(stderr,"validator extracts block %d", block.block_id());
         bq.bq_queue.pop();
@@ -811,8 +821,10 @@ void *validation_handler(void *arg) {
         storage_client.write_blocks(serialised_block);
 
         // 每个区块记录一次交易处理统计
-        log_info(stderr, "STATS: Block[%ld] processed %d transactions, total_ops delta: %ld, new total: %ld", 
+        if(block_count % 100 == 0) {
+            log_info(stderr, "STATS: Block[%ld] processed %d transactions, total_ops delta: %ld, new total: %ld", 
                 block.block_id(), block.transactions_size(), trans_end - trans_start, trans_end);
+        }
 
         if (now - last_health_check > 60) {
             log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
