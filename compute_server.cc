@@ -947,24 +947,34 @@ class ComputeCommImpl final : public ComputeComm::Service {
     }
 
     Status send_to_validator_stream(ServerContext *context, ServerReader<Block> *reader, google::protobuf::Empty *response) override {
+        log_info(stderr, "STREAM_START: Validator stream connection established");
+        
         Block block;
-
+        int block_count = 0;
+        
         while (reader->Read(&block)) {
-            // pthread_mutex_lock(&bq.mutex);
-            // // log_info(stderr,"received block %d in validator stream", block.block_id());
-            // bq.bq_queue.push(block);
-            // pthread_mutex_unlock(&bq.mutex);
-            // sem_post(&bq.full);
+            block_count++;
             
             pthread_mutex_lock(&bq.mutex);
             bq.bq_queue.push(block);
-            log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %zu", 
-                    block.block_id(), block.transactions_size(), bq.bq_queue.size());
+            int queue_size = bq.bq_queue.size();
             pthread_mutex_unlock(&bq.mutex);
-            sem_post(&bq.full);
-            // total_ops += block.transactions_size();
+            
+            log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %d (block #%d in stream)",
+                    block.block_id(), block.transactions_size(), queue_size, block_count);
+            
+            int sem_result = sem_post(&bq.full);
+            if (sem_result != 0) {
+                log_err("sem_post failed with error: %s", strerror(errno));
+            }
+            
+            // 在这里执行轻量级健康检查
+            int sem_value;
+            sem_getvalue(&bq.full, &sem_value);
+            log_info(stderr, "Semaphore value after post: %d", sem_value);
         }
-
+        
+        log_info(stderr, "STREAM_END: Validator stream connection closed, processed %d blocks", block_count);
         return Status::OK;
     }
 
