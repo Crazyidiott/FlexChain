@@ -281,12 +281,12 @@ void *block_formation_thread(void *arg) {
                     // context.set_wait_for_ready(true);
 
                     validator_stream->Write(block, (void *)1);
-                    log_info(stderr, "block formation thread: block #%d is sent to validator.", block_index);
+                    // log_info(stderr, "block formation thread: block #%d is sent to validator.", block_index);
                     bool ok;
                     void *got_tag;
                     // cq.AsyncNext(&got_tag, &ok, gpr_time_0(GPR_CLOCK_REALTIME));
                     cq.Next(&got_tag, &ok);
-                    log_info(stderr, "ok is %d", ok);
+                    // log_info(stderr, "ok is %d", ok);
 
                     // stub->async()->send_to_validator(&context, &block, &rsp, [](Status s){});
                     // Status status = stub->send_to_validator(&context, block, &rsp);  // TODO: use client stream + async
