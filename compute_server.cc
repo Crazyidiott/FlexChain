@@ -793,7 +793,7 @@ void *validation_handler(void *arg) {
         // 每60秒输出一次健康状态
         if (now - last_health_check > 60) {
             log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
-                    ctx.thread_index, block_count, total_ops.load());
+                    ctx->thread_index, block_count, total_ops.load());
         }
 
         for (int trans_id = 0; trans_id < block.transactions_size(); trans_id++) {
@@ -808,7 +808,7 @@ void *validation_handler(void *arg) {
 
         if (now - last_health_check > 60) {
             log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
-                    ctx.thread_index, block_count, total_ops.load());
+                    ctx->thread_index, block_count, total_ops.load());
             last_health_check = now;
         }
     }
