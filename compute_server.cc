@@ -808,10 +808,10 @@ void *validation_handler(void *arg) {
         block_count++;
         
         // 每60秒输出一次健康状态
-        if (now - last_health_check > 60) {
-            log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
-                    ctx->thread_index, block_count, total_ops.load());
-        }
+        // if (now - last_health_check > 60) {
+        //     log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
+        //             ctx->thread_index, block_count, total_ops.load());
+        // }
 
         long trans_start = total_ops.load();
 
@@ -828,16 +828,16 @@ void *validation_handler(void *arg) {
         storage_client.write_blocks(serialised_block);
 
         // 每个区块记录一次交易处理统计
-        if(block_count % 100 == 0) {
-            log_info(stderr, "STATS: Block[%ld] processed %d transactions, total_ops delta: %ld, new total: %ld", 
-                block.block_id(), block.transactions_size(), trans_end - trans_start, trans_end);
-        }
+        // if(block_count % 100 == 0) {
+        //     log_info(stderr, "STATS: Block[%ld] processed %d transactions, total_ops delta: %ld, new total: %ld", 
+        //         block.block_id(), block.transactions_size(), trans_end - trans_start, trans_end);
+        // }
 
-        if (now - last_health_check > 60) {
-            log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
-                    ctx->thread_index, block_count, total_ops.load());
-            last_health_check = now;
-        }
+        // if (now - last_health_check > 60) {
+        //     log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
+        //             ctx->thread_index, block_count, total_ops.load());
+        //     last_health_check = now;
+        // }
     }
 
     return NULL;
@@ -957,28 +957,29 @@ class ComputeCommImpl final : public ComputeComm::Service {
         log_info(stderr, "STREAM_START: Validator stream connection established");
         
         Block block;
-        int block_count = 0;
+        // int block_count = 0;
         
         while (reader->Read(&block)) {
-            block_count++;
+            // block_count++;
             
             pthread_mutex_lock(&bq.mutex);
             bq.bq_queue.push(block);
             int queue_size = bq.bq_queue.size();
             pthread_mutex_unlock(&bq.mutex);
+            sem_post(&bq.full);
             
-            log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %d (block #%d in stream)",
-                    block.block_id(), block.transactions_size(), queue_size, block_count);
+            // log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %d (block #%d in stream)",
+            //         block.block_id(), block.transactions_size(), queue_size, block_count);
             
-            int sem_result = sem_post(&bq.full);
-            if (sem_result != 0) {
-                log_err("sem_post failed with error: %s", strerror(errno));
-            }
+            // int sem_result = sem_post(&bq.full);
+            // if (sem_result != 0) {
+            //     log_err("sem_post failed with error: %s", strerror(errno));
+            // }
             
             // 在这里执行轻量级健康检查
-            int sem_value;
-            sem_getvalue(&bq.full, &sem_value);
-            log_info(stderr, "Semaphore value after post: %d", sem_value);
+            // int sem_value;
+            // sem_getvalue(&bq.full, &sem_value);
+            // log_info(stderr, "Semaphore value after post: %d", sem_value);
         }
         
         log_info(stderr, "STREAM_END: Validator stream connection closed, processed %d blocks", block_count);
@@ -1413,8 +1414,7 @@ int CoreManager::add_core(int core_id) {
     
     // Add the core to active cores
     active_cores.push_back(core_id);
-    log_info(stderr, "Adding core %d with %d simulation threads and %d validation threads.\n", 
-             core_id, sim_threads_per_core, val_threads_per_core);
+    // log_info(stderr, "Adding core %d with %d simulation threads and %d validation threads.\n", core_id, sim_threads_per_core, val_threads_per_core);
     
     // Create simulation threads
     std::vector<pthread_t> sim_tids;
@@ -1455,10 +1455,10 @@ int CoreManager::remove_core(int core_id) {
         return -2;
     }
     
-    log_info(stderr, "Removing core %d\n", core_id);
+    // log_info(stderr, "Removing core %d\n", core_id);
     
     // Stop all simulation threads for this core
-    log_info(stderr, "size of sim_threads_by_core: %d", sim_threads_by_core[core_id].size());
+    // log_info(stderr, "size of sim_threads_by_core: %d", sim_threads_by_core[core_id].size());
     for (pthread_t tid : sim_threads_by_core[core_id]) {
         // log_info(stderr, "Stopping simulation thread %lu\n", tid);
         int ctx_index = thread_to_context_index[tid];
