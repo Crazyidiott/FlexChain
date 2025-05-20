@@ -775,6 +775,10 @@ void *validation_handler(void *arg) {
         compute_clients.emplace_back(compute_channel_ptrs[i]);
     }
 
+    // 添加周期性健康检查计数器
+    long block_count = 0;
+    time_t last_health_check = time(NULL);
+
     while (!ctx->end_flag) {
         sem_wait(&bq.full);
         pthread_mutex_lock(&bq.mutex);
@@ -782,6 +786,15 @@ void *validation_handler(void *arg) {
         // log_info(stderr,"validator extracts block %d", block.block_id());
         bq.bq_queue.pop();
         pthread_mutex_unlock(&bq.mutex);
+
+        time_t now = time(NULL);
+        block_count++;
+        
+        // 每60秒输出一次健康状态
+        if (now - last_health_check > 60) {
+            log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
+                    ctx.thread_index, block_count, total_ops.load());
+        }
 
         for (int trans_id = 0; trans_id < block.transactions_size(); trans_id++) {
             validate_transaction(*ctx, storage_client, compute_clients, block.block_id(), trans_id, block.transactions(trans_id));
@@ -792,6 +805,12 @@ void *validation_handler(void *arg) {
             log_err("validator: failed to serialize block.");
         }
         storage_client.write_blocks(serialised_block);
+
+        if (now - last_health_check > 60) {
+            log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
+                    ctx.thread_index, block_count, total_ops.load());
+            last_health_check = now;
+        }
     }
 
     return NULL;
