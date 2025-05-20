@@ -787,7 +787,7 @@ void *validation_handler(void *arg) {
 
         pthread_mutex_lock(&bq.mutex);
         if (bq.bq_queue.empty()) {
-            log_warn(stderr, "EMPTY: validation_handler[%d] woke up but queue is empty!", ctx->thread_index);
+            log_info(stderr, "EMPTY: validation_handler[%d] woke up but queue is empty!", ctx->thread_index);
             pthread_mutex_unlock(&bq.mutex);
             continue;
         }
