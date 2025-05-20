@@ -796,15 +796,23 @@ void *validation_handler(void *arg) {
                     ctx->thread_index, block_count, total_ops.load());
         }
 
+        long trans_start = total_ops.load();
+
         for (int trans_id = 0; trans_id < block.transactions_size(); trans_id++) {
             validate_transaction(*ctx, storage_client, compute_clients, block.block_id(), trans_id, block.transactions(trans_id));
         }
+
+        long trans_end = total_ops.load();
 
         /* store the block with its bit mask in remote block store */
         if (!block.SerializeToString(&serialised_block)) {
             log_err("validator: failed to serialize block.");
         }
         storage_client.write_blocks(serialised_block);
+
+        // 每个区块记录一次交易处理统计
+        log_info(stderr, "STATS: Block[%ld] processed %d transactions, total_ops delta: %ld, new total: %ld", 
+                block.block_id(), block.transactions_size(), trans_end - trans_start, trans_end);
 
         if (now - last_health_check > 60) {
             log_info(stderr, "HEALTH: validation_handler[%d] alive, processed %ld blocks, current total_ops: %ld", 
