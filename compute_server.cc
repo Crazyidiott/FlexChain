@@ -936,9 +936,9 @@ class ComputeCommImpl final : public ComputeComm::Service {
    public:
     Status send_to_validator(ServerContext *context, const Block *request, google::protobuf::Empty *response) override {
         pthread_mutex_lock(&bq.mutex);
-        bq.bq_queue.push(block);
+        bq.bq_queue.push(*request);
         log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %zu", 
-                block.block_id(), block.transactions_size(), bq.bq_queue.size());
+                    request->block_id(), request->transactions_size(), bq.bq_queue.size());
         pthread_mutex_unlock(&bq.mutex);
         sem_post(&bq.full);
         // total_ops += request->transactions_size();
@@ -950,6 +950,12 @@ class ComputeCommImpl final : public ComputeComm::Service {
         Block block;
 
         while (reader->Read(&block)) {
+            // pthread_mutex_lock(&bq.mutex);
+            // // log_info(stderr,"received block %d in validator stream", block.block_id());
+            // bq.bq_queue.push(block);
+            // pthread_mutex_unlock(&bq.mutex);
+            // sem_post(&bq.full);
+            
             pthread_mutex_lock(&bq.mutex);
             bq.bq_queue.push(block);
             log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %zu", 
