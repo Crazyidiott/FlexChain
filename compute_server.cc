@@ -780,17 +780,17 @@ void *validation_handler(void *arg) {
     time_t last_health_check = time(NULL);
 
     while (!ctx->end_flag) {
-        log_info(stderr, "WAIT: validation_handler[%d] waiting for blocks...", ctx->thread_index);
+        // log_info(stderr, "WAIT: validation_handler[%d] waiting for blocks...", ctx->thread_index);
         sem_wait(&bq.full);
-        log_info(stderr, "WAKE: validation_handler[%d] woke up after sem_wait", ctx->thread_index);
+        // log_info(stderr, "WAKE: validation_handler[%d] woke up after sem_wait", ctx->thread_index);
         pthread_mutex_lock(&bq.mutex);
 
         pthread_mutex_lock(&bq.mutex);
-        if (bq.bq_queue.empty()) {
-            log_info(stderr, "EMPTY: validation_handler[%d] woke up but queue is empty!", ctx->thread_index);
-            pthread_mutex_unlock(&bq.mutex);
-            continue;
-        }
+        // if (bq.bq_queue.empty()) {
+        //     log_info(stderr, "EMPTY: validation_handler[%d] woke up but queue is empty!", ctx->thread_index);
+        //     pthread_mutex_unlock(&bq.mutex);
+        //     continue;
+        // }
 
         Block block = bq.bq_queue.front();
         // log_info(stderr,"validator extracts block %d", block.block_id());
@@ -937,8 +937,8 @@ class ComputeCommImpl final : public ComputeComm::Service {
     Status send_to_validator(ServerContext *context, const Block *request, google::protobuf::Empty *response) override {
         pthread_mutex_lock(&bq.mutex);
         bq.bq_queue.push(*request);
-        log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %zu", 
-                    request->block_id(), request->transactions_size(), bq.bq_queue.size());
+        // log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %zu", 
+        //             request->block_id(), request->transactions_size(), bq.bq_queue.size());
         pthread_mutex_unlock(&bq.mutex);
         sem_post(&bq.full);
         // total_ops += request->transactions_size();
@@ -958,8 +958,8 @@ class ComputeCommImpl final : public ComputeComm::Service {
             
             pthread_mutex_lock(&bq.mutex);
             bq.bq_queue.push(block);
-            log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %zu", 
-                    block.block_id(), block.transactions_size(), bq.bq_queue.size());
+            // log_info(stderr, "PRODUCE: Added Block[%ld] with %d transactions to queue, queue size now: %zu", 
+            //         block.block_id(), block.transactions_size(), bq.bq_queue.size());
             pthread_mutex_unlock(&bq.mutex);
             sem_post(&bq.full);
             // total_ops += block.transactions_size();
