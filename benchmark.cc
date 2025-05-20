@@ -314,11 +314,11 @@ void *client_thread(void *arg) {
             }
             else if(type == 1){
                 log_info(stderr, "workload type is KMEANS");
-                trans_per_interval = 1; //20/s
+                trans_per_interval = 100; //2000/s
             }
             else if(type == 2){
                 log_info(stderr, "workload type is SMALLBANK");
-                trans_per_interval = 1; //20/s
+                trans_per_interval = 100; //2000/s
             }
         }
         
