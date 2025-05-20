@@ -15,9 +15,70 @@ atomic<bool> ready_flag = false;
 atomic<bool> end_flag = false;
 atomic<long> total_ops = 0;
 
+// 环形日志文件配置
+const size_t RAFT_LOG_MAX_SIZE = 1024 * 1024 * 1024; // 1GB
+const size_t RAFT_LOG_HEADER_SIZE = 16; // 文件头部大小
+const size_t RAFT_LOG_DATA_START = RAFT_LOG_HEADER_SIZE; // 数据区开始位置
+
+// 文件头结构
+struct RaftLogHeader {
+    uint64_t write_pos;    // 当前写入位置
+    uint64_t valid_data;   // 有效数据量
+};
+
+// 初始化环形日志文件
+bool initialize_raft_log(const std::string& log_path) {
+    std::ofstream log_file(log_path, std::ios::out | std::ios::binary);
+    if (!log_file.is_open()) {
+        log_err("Failed to create raft log file");
+        return false;
+    }
+    
+    // 初始化头部
+    RaftLogHeader header;
+    header.write_pos = RAFT_LOG_DATA_START;
+    header.valid_data = 0;
+    
+    log_file.write(reinterpret_cast<char*>(&header), sizeof(header));
+    
+    // 预分配空间
+    log_file.seekp(RAFT_LOG_MAX_SIZE - 1);
+    log_file.put('\0');
+    
+    log_file.close();
+    log_info(stderr, "Initialized circular raft log file with size: %zu bytes", RAFT_LOG_MAX_SIZE);
+    return true;
+}
+
+// 更新头部信息
+bool update_raft_log_header(std::fstream& log_file, uint64_t write_pos, uint64_t valid_data) {
+    log_file.seekp(0, std::ios::beg);
+    RaftLogHeader header;
+    header.write_pos = write_pos;
+    header.valid_data = valid_data;
+    
+    log_file.write(reinterpret_cast<char*>(&header), sizeof(header));
+    return log_file.good();
+}
+
+// 读取头部信息
+bool read_raft_log_header(std::fstream& log_file, uint64_t& write_pos, uint64_t& valid_data) {
+    log_file.seekg(0, std::ios::beg);
+    RaftLogHeader header;
+    
+    log_file.read(reinterpret_cast<char*>(&header), sizeof(header));
+    if (!log_file.good()) {
+        return false;
+    }
+    
+    write_pos = header.write_pos;
+    valid_data = header.valid_data;
+    return true;
+}
 
 bool has_rw_conflicts(int target_trans, int current_trans,
                       const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
+    // 现有实现保持不变
     if (read_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
         return false;
     } else {
@@ -33,6 +94,7 @@ bool has_rw_conflicts(int target_trans, int current_trans,
 }
 
 bool has_ww_conflicts(int target_trans, int current_trans, const vector<unordered_set<string>> &write_sets) {
+    // 现有实现保持不变
     if (write_sets[target_trans].size() == 0 || write_sets[current_trans].size() == 0) {
         return false;
     } else {
@@ -49,6 +111,7 @@ bool has_ww_conflicts(int target_trans, int current_trans, const vector<unordere
 
 bool has_wr_conflicts(int target_trans, int current_trans,
                       const vector<unordered_set<string>> &read_sets, const vector<unordered_set<string>> &write_sets) {
+    // 现有实现保持不变
     if (write_sets[target_trans].size() == 0 || read_sets[current_trans].size() == 0) {
         return false;
     } else {
@@ -65,6 +128,7 @@ bool has_wr_conflicts(int target_trans, int current_trans,
 
 void *block_formation_thread(void *arg) {
     log_info(stderr, "Block formation thread is running.");
+    
     /* set up grpc channels to validators */
     shared_ptr<grpc::Channel> channel;
     unique_ptr<ComputeComm::Stub> stub;
@@ -82,52 +146,26 @@ void *block_formation_thread(void *arg) {
             }
         }
         channel = grpc::CreateChannel(validator_grpc_endpoint, grpc::InsecureChannelCredentials());
-        // while (channel->GetState(true) != GRPC_CHANNEL_READY)
-        //     ;
-        // log_info(stderr, "block formation thread: channel for validator is in ready state.");
         stub = ComputeComm::NewStub(channel);
     }
 
-    // 打开日志文件函数
-    auto open_current_log_file = [](const string& path) -> ifstream {
-        ifstream logi(path, ios::in | ios::binary);
-        if (!logi.is_open()) {
-            log_err("Failed to open log file: %s", path.c_str());
-        }
-        return logi;
-    };
-
     std::string log_file_path = "./consensus/raft.log";
-    ifstream logi = open_current_log_file(log_file_path);
-    // std::string log_file_path = "./consensus/raft.log";
-    // ifstream logi("./consensus/raft.log", ios::in);
-    // assert(logi.is_open());
-
-    // 重新打开文件函数
-    auto reopen_log_file = [&](bool check_rotated = true) {
-        logi.close();
-        
-        // 如果需要，检查是否存在轮转后的文件
-        if (check_rotated) {
-            string rotated_log = "./consensus/raft.log.1";
-            if (std::filesystem::exists(rotated_log)) {
-                // 获取当前读取位置相对于文件大小的比例
-                struct stat current_stat, rotated_stat;
-                if (stat(log_file_path.c_str(), &current_stat) == 0 && 
-                    stat(rotated_log.c_str(), &rotated_stat) == 0) {
-                    // 如果我们接近当前文件的末尾，切换到轮转后的文件
-                    if (logi.tellg() > current_stat.st_size - 1024) {
-                        log_info(stderr, "Switching to rotated log file");
-                        log_file_path = rotated_log;
-                    }
-                }
-            }
-        }
-        
-        logi = open_current_log_file(log_file_path);
-    };
-
-
+    std::fstream logi(log_file_path, std::ios::in | std::ios::out | std::ios::binary);
+    if (!logi.is_open()) {
+        log_err("Failed to open raft log file for reading");
+        return NULL;
+    }
+    
+    // 读取当前的写位置和有效数据量
+    uint64_t write_pos = RAFT_LOG_DATA_START;
+    uint64_t valid_data = 0;
+    if (!read_raft_log_header(logi, write_pos, valid_data)) {
+        log_err("Failed to read raft log header");
+        return NULL;
+    }
+    
+    // 设置初始读位置
+    uint64_t read_pos = RAFT_LOG_DATA_START;
 
     unsigned long last_applied = 0;
     int majority = follower_grpc_endpoints.size() / 2;
@@ -146,8 +184,7 @@ void *block_formation_thread(void *arg) {
     context.set_wait_for_ready(true);
     CompletionQueue cq;
     unique_ptr<ClientAsyncWriter<Block>> validator_stream;
-    if (role == LEADER)
-    {
+    if (role == LEADER) {
         validator_stream = stub->Asyncsend_to_validator_stream(&context, &rsp, &cq, (void *)1);
     }
     bool ok;
@@ -165,80 +202,86 @@ void *block_formation_thread(void *arg) {
             }
             if (count >= majority) {
                 commit_index = N;
-                // log_debug(stderr, "commit_index is updated to %ld.", commit_index.load());
             }
         }
 
         if (commit_index > last_applied) {
             last_applied++;
-
-            // 获取当前文件写入的位置
-            std::streampos current_read_pos = logi.tellg();
-            logi.clear(); // 清理任何错误状态，不清除会影响seekg
-
-            struct stat file_stat;
-            if (stat(log_file_path.c_str(), &file_stat) != 0) {
-                perror("stat failed");
+            
+            // 重新读取写位置，确保获取最新状态
+            logi.clear(); // 清理任何错误状态
+            if (!read_raft_log_header(logi, write_pos, valid_data)) {
+                log_err("Failed to read updated header");
                 std::this_thread::sleep_for(std::chrono::microseconds(10));
                 continue;
             }
-            off_t file_size = file_stat.st_size;
-
-            // 判断是否可以读取size
-            if (current_read_pos + sizeof(uint32_t) > file_size) {
-                 // 检查是否存在轮转后的新日志文件
-                string new_log = "./consensus/raft.log";
-                if (log_file_path != new_log && std::filesystem::exists(new_log)) {
-                    // 如果当前使用的是旧的日志文件，并且新的日志文件已创建，切换到新文件
-                    log_info(stderr, "Switching to new log file after rotation");
-                    log_file_path = new_log;
-                    reopen_log_file(false);
-                    continue;
-                }
-
-                // size都读不了，说明写线程没写完，等
+            
+            // 计算可读取的数据量
+            uint64_t readable_bytes;
+            if (write_pos >= read_pos) {
+                readable_bytes = write_pos - read_pos;
+            } else {
+                // 写指针已环绕
+                readable_bytes = (RAFT_LOG_MAX_SIZE - read_pos) + (write_pos - RAFT_LOG_DATA_START);
+            }
+            
+            // 检查读指针是否已经追上写指针
+            if (readable_bytes == 0) {
+                log_debug(stderr, "No data available to read, waiting...");
                 std::this_thread::sleep_for(std::chrono::microseconds(10));
                 continue;
             }
-
+            
+            // 确保至少能读取数据大小字段
+            if (readable_bytes < sizeof(uint32_t)) {
+                log_debug(stderr, "Not enough data to read size field, waiting...");
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+                continue;
+            }
+            
+            // 读取数据大小
             uint32_t size;
-            logi.read((char *)&size, sizeof(uint32_t));
+            logi.seekg(read_pos);
+            logi.read(reinterpret_cast<char*>(&size), sizeof(size));
+            
             if (!logi.good()) {
-                // 读取错误
+                log_err("Failed to read data size");
                 logi.clear();
                 std::this_thread::sleep_for(std::chrono::microseconds(10));
                 continue;
             }
-
-            // 判断是否可以读取size字节
-            current_read_pos = logi.tellg(); // 更新读指针
-            if (current_read_pos + size > file_size) {
-                // 检查是否需要切换到新文件
-                string new_log = "./consensus/raft.log";
-                if (log_file_path != new_log && std::filesystem::exists(new_log)) {
-                    log_info(stderr, "Switching to new log file after rotation");
-                    log_file_path = new_log;
-                    reopen_log_file(false);
-                    continue;
-                }
-
-                // 说明size部分还没写完
-                // 回退
-                logi.seekg(-(std::streamoff)sizeof(uint32_t), std::ios::cur);
+            
+            // 确保有足够的数据可读取完整记录
+            if (readable_bytes < sizeof(uint32_t) + size) {
+                log_debug(stderr, "Not enough data to read complete record, waiting...");
                 std::this_thread::sleep_for(std::chrono::microseconds(10));
                 continue;
             }
-
-            // 真正读取数据
-            char *entry_ptr = (char *)malloc(size);
+            
+            // 读取数据内容
+            char* entry_ptr = (char*)malloc(size);
+            if (!entry_ptr) {
+                log_err("Failed to allocate memory for entry");
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+                continue;
+            }
+            
             logi.read(entry_ptr, size);
+            
             if (!logi.good()) {
                 free(entry_ptr);
                 logi.clear();
                 std::this_thread::sleep_for(std::chrono::microseconds(10));
                 continue;
             }
+            
+            // 成功读取完整记录，更新读位置
+            read_pos += sizeof(uint32_t) + size;
+            if (read_pos >= RAFT_LOG_MAX_SIZE) {
+                read_pos = RAFT_LOG_DATA_START;
+            }
 
+            // 处理读取的数据
             curr_size += size;
             string serialized_transaction(entry_ptr, size);
             free(entry_ptr);
@@ -249,50 +292,16 @@ void *block_formation_thread(void *arg) {
                 log_err("block formation thread: error in deserialising transaction.");
             }
             local_ops++;
-        
-
-            // unordered_set<string> read_set;
-            // unordered_set<string> write_set;
-            // for (int i = 0; i < transaction->read_set_size(); i++) {
-            //     read_set.insert(transaction->read_set(i).read_key());
-            // }
-            // for (int i = 0; i < transaction->write_set_size(); i++) {
-            //     write_set.insert(transaction->write_set(i).write_key());
-            // }
-            // read_sets.push_back(read_set);
-            // write_sets.push_back(write_set);
-
-            // transaction->clear_adjacency_list();
-            // for (int target_index = 0; target_index < trans_index; target_index++) {
-            //     /* check read-write write-write write-read conflict */
-            //     if (has_rw_conflicts(target_index, trans_index, read_sets, write_sets) ||
-            //         has_ww_conflicts(target_index, trans_index, write_sets) ||
-            //         has_wr_conflicts(target_index, trans_index, read_sets, write_sets)) {
-            //         transaction->add_adjacency_list(target_index);
-            //     }
-            // }
-            // trans_index++;
+            trans_index++;
 
             if (curr_size >= max_block_size) {
                 /* cut the block and send it to all validators */
                 block.set_block_id(block_index);
                 if (role == LEADER) {
-                    // ClientContext context;
-                    // context.set_wait_for_ready(true);
-
                     validator_stream->Write(block, (void *)1);
                     bool ok;
                     void *got_tag;
-                    // cq.AsyncNext(&got_tag, &ok, gpr_time_0(GPR_CLOCK_REALTIME));
                     cq.Next(&got_tag, &ok);
-
-                    // stub->async()->send_to_validator(&context, &block, &rsp, [](Status s){});
-                    // Status status = stub->send_to_validator(&context, block, &rsp);  // TODO: use client stream + async
-                    // if (!status.ok()) {
-                    //     log_err("block formation thread: gRPC failed with error message: %s.", status.error_message().c_str());
-                    // } else {
-                    //     log_debug(stderr, "block formation thread: block #%d is sent to validator.", block_index);
-                    // }
                 }
 
                 curr_size = 0;
@@ -307,40 +316,60 @@ void *block_formation_thread(void *arg) {
             }
         }
     }
+    
     total_ops = local_ops;
     return NULL;
 }
 
 class ConsensusCommImpl final : public ConsensusComm::Service {
    public:
-    explicit ConsensusCommImpl() : logoo("./consensus/raft.log", ios::out | ios::binary) {
-        max_log_size = static_cast<uint64_t>(1024) * 1024 * 1024; // 1GB
-        max_log_files = 5; // 保留5个历史日志
-        current_log_size = 0;
-        struct stat file_stat;
-        if (stat("./consensus/raft.log", &file_stat) == 0) {
-            current_log_size = file_stat.st_size;
+    explicit ConsensusCommImpl() : logoo("./consensus/raft.log", ios::in | ios::out | ios::binary) {
+        // 读取当前写位置
+        if (!read_raft_log_header(logoo, write_pos_, valid_data_)) {
+            write_pos_ = RAFT_LOG_DATA_START;
+            valid_data_ = 0;
+            update_raft_log_header(logoo, write_pos_, valid_data_);
         }
     }
-    
 
     /* implementation of AppendEntriesRPC */
     Status append_entries(ServerContext *context, const AppendRequest *request, AppendResponse *response) override {
         int i = 0;
         for (; i < request->log_entries_size(); i++) {
             uint32_t size = request->log_entries(i).size();
-
-            // 检查是否需要轮转日志
-            if (current_log_size + sizeof(uint32_t) + size > max_log_size) {
-                rotate_log();
+            const std::string& entry_data = request->log_entries(i);
+            
+            
+            
+            // 写入数据大小
+            logoo.seekp(write_pos_);
+            logoo.write(reinterpret_cast<const char*>(&size), sizeof(size));
+            
+            // 写入数据
+            logoo.write(entry_data.c_str(), entry_data.size());
+            
+            if (!logoo.good()) {
+                log_err("Failed to write to raft log");
+                return Status(grpc::StatusCode::INTERNAL, "Failed to write to raft log"); // 修复
+                // return Status::INTERNAL;
             }
+            
+            // 更新写位置
+            write_pos_ += sizeof(size) + entry_data.size();
+            valid_data_ += sizeof(size) + entry_data.size();
 
-            logoo.write((char *)&size, sizeof(uint32_t));
-            logoo.write(request->log_entries(i).c_str(), size);
-
-            current_log_size += sizeof(uint32_t) + size;
+            // 检查是否需要环绕
+            if (write_pos_  > RAFT_LOG_MAX_SIZE) {
+                write_pos_ = RAFT_LOG_DATA_START;
+                update_raft_log_header(logoo, write_pos_, valid_data_);
+                logoo.flush();
+            }
+            
             last_log_index++;
         }
+        
+        // 更新头部
+        update_raft_log_header(logoo, write_pos_, valid_data_);
         logoo.flush();
 
         uint64_t leader_commit = request->leader_commit();
@@ -352,7 +381,8 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
             }
         }
 
-        log_debug(stderr, "AppendEntriesRPC finished: last_log_index = %ld, commit_index = %ld.", last_log_index.load(), commit_index.load());
+        log_debug(stderr, "AppendEntriesRPC finished: last_log_index = %ld, commit_index = %ld.", 
+                 last_log_index.load(), commit_index.load());
 
         return Status::OK;
     }
@@ -378,55 +408,32 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
     }
 
    private:
-    ofstream logoo;
-    size_t max_log_size;  // 最大日志文件大小
-    size_t current_log_size;  // 当前日志文件大小
-    int max_log_files;  // 最大保留的日志文件数量
-    // 日志轮转函数
-    void rotate_log() {
-        // 关闭当前日志文件
-        logoo.close();
-        
-        // 删除最老的日志文件（如果超过最大数量）
-        string oldest_log = "./consensus/raft.log." + to_string(max_log_files);
-        if (std::filesystem::exists(oldest_log)) {
-            std::filesystem::remove(oldest_log);
-        }
-        
-        // 重命名现有的日志文件，从最老的开始
-        for (int i = max_log_files - 1; i >= 1; i--) {
-            string old_name = "./consensus/raft.log." + to_string(i);
-            string new_name = "./consensus/raft.log." + to_string(i + 1);
-            if (std::filesystem::exists(old_name)) {
-                std::filesystem::rename(old_name, new_name);
-            }
-        }
-        
-        // 重命名当前日志文件
-        std::filesystem::rename("./consensus/raft.log", "./consensus/raft.log.1");
-        
-        // 打开新的日志文件
-        logoo.open("./consensus/raft.log", ios::out | ios::binary);
-        if (!logoo.is_open()) {
-            log_err("Failed to open new log file after rotation");
-        }
-        
-        // 重置当前日志大小
-        current_log_size = 0;
-        
-        log_info(stderr, "Log rotation completed, created new raft.log");
-    }
+    std::fstream logoo;
+    uint64_t write_pos_ = RAFT_LOG_DATA_START;
+    uint64_t valid_data_ = 0;
 };
 
 void run_leader(const std::string &server_address, std::string configfile) {
     std::filesystem::remove_all("./consensus");
     std::filesystem::create_directory("./consensus");
 
-    ofstream logo("./consensus/raft.log", ios::out | ios::binary);
-    assert(logo.is_open());
-    size_t max_log_size = 1024 * 1024 * 1024; // 1GB
-    size_t current_log_size = 0;
-    int max_log_files = 5;
+    std::string log_path = "./consensus/raft.log";
+    initialize_raft_log(log_path);
+    
+    std::fstream logo(log_path, std::ios::in | std::ios::out | std::ios::binary);
+    if (!logo.is_open()) {
+        log_err("Failed to open raft log file for writing");
+        return;
+    }
+    
+    // 读取当前的写位置
+    uint64_t write_pos = RAFT_LOG_DATA_START;
+    uint64_t valid_data = 0;
+    if (!read_raft_log_header(logo, write_pos, valid_data)) {
+        write_pos = RAFT_LOG_DATA_START;
+        valid_data = 0;
+        update_raft_log_header(logo, write_pos, valid_data);
+    }
 
     pthread_t block_form_tid;
     pthread_create(&block_form_tid, NULL, block_formation_thread, &configfile);
@@ -454,77 +461,57 @@ void run_leader(const std::string &server_address, std::string configfile) {
     log_info(stderr, "RPC server listening on %s", server_address.c_str());
 
     ready_flag = true;
-    auto rotate_log = [&]() {
-        // 关闭当前日志文件
-        logo.close();
-        
-        // 删除最老的日志文件（如果超过最大数量）
-        string oldest_log = "./consensus/raft.log." + to_string(max_log_files);
-        if (std::filesystem::exists(oldest_log)) {
-            std::filesystem::remove(oldest_log);
-        }
-        
-        // 重命名现有的日志文件，从最老的开始
-        for (int i = max_log_files - 1; i >= 1; i--) {
-            string old_name = "./consensus/raft.log." + to_string(i);
-            string new_name = "./consensus/raft.log." + to_string(i + 1);
-            if (std::filesystem::exists(old_name)) {
-                std::filesystem::rename(old_name, new_name);
-            }
-        }
-        
-        // 重命名当前日志文件
-        std::filesystem::rename("./consensus/raft.log", "./consensus/raft.log.1");
-        
-        // 打开新的日志文件
-        logo.open("./consensus/raft.log", ios::out | ios::binary);
-        if (!logo.is_open()) {
-            log_err("Failed to open new log file after rotation");
-        }
-        
-        // 重置当前日志大小
-        current_log_size = 0;
-        
-        log_info(stderr, "Log rotation completed, created new raft.log");
-    };
 
     while (true) {
         pthread_mutex_lock(&tq.mutex);
         int i = 0;
         for (; (!tq.trans_queue.empty()) && i < LOG_ENTRY_BATCH; i++) {
             uint32_t size = tq.trans_queue.front().size();
-
-            // 检查是否需要轮转日志
-            if (current_log_size + sizeof(uint32_t) + size > max_log_size) {
-                pthread_mutex_unlock(&tq.mutex); // 先解锁，避免长时间持有锁
-                rotate_log();
-                pthread_mutex_lock(&tq.mutex); // 再次获取锁，继续处理
-                
-                // 重新检查队列，因为在轮转过程中可能已经改变
-                if (tq.trans_queue.empty()) {
-                    break;
-                }
-                size = tq.trans_queue.front().size();
-            }
-
-            // std::cout << "Before write: tellP=" << logo.tellp() << std::endl;  
-            logo.write((char *)&size, sizeof(uint32_t));
-            // std::cout << "After write: tellp=" << logo.tellp() << ",size=" << size << ",good=" << logo.good() << ",fail=" << logo.fail() << std::endl;
-
+            const std::string& data = tq.trans_queue.front();
             
-            logo.write(tq.trans_queue.front().c_str(), tq.trans_queue.front().size());
+            // 写入大小
+            logo.seekp(write_pos);
+            logo.write(reinterpret_cast<char*>(&size), sizeof(size));
+            
+            // 写入数据
+            logo.write(data.c_str(), data.size());
+            
+            if (!logo.good()) {
+                log_err("Failed to write to raft log");
+                pthread_mutex_unlock(&tq.mutex);
+                sleep(1); // 避免快速失败的循环
+                continue;
+            }
+            
+            // 更新写位置
+            write_pos += sizeof(size) + size;
+            valid_data += sizeof(size) + size;
 
-            current_log_size += sizeof(uint32_t) + size;
-
+            // 检查是否需要环绕
+            if (write_pos > RAFT_LOG_MAX_SIZE) {
+                log_info(stderr, "Writer wrapping around: write_pos from %lu to %lu", write_pos, RAFT_LOG_DATA_START);
+                write_pos = RAFT_LOG_DATA_START;
+                // 立即强制刷新头部信息
+                update_raft_log_header(logo, write_pos, valid_data);
+                logo.flush();
+            }
+            
             tq.trans_queue.pop();
         }
-        logo.flush();
+        
+        // 更新头部信息
+        if (i > 0) {
+            update_raft_log_header(logo, write_pos, valid_data);
+            logo.flush();
+        }
+        
         last_log_index += i;
         pthread_mutex_unlock(&tq.mutex);
     }
 }
 
 void *client_thread(void *arg) {
+    // 现有实现保持不变
     int trans_per_interval = 2000;
     int interval = 20000;
 
@@ -553,6 +540,7 @@ void *client_thread(void *arg) {
 }
 
 void *run_client(void *arg) {
+    // 现有实现保持不变
     pthread_t client_tid;
     // pthread_create(&client_tid, NULL, client_thread, NULL);
 
@@ -572,7 +560,6 @@ void *run_client(void *arg) {
     while (total_ops == 0)
         log_info(stderr,"stuck in no total_ops");
         
-
     log_info(stderr, "*******************************benchmarking completed*******************************");
     uint64_t time = (after - before).count();
     log_info(stderr, "throughput = %f /seconds.", ((float)total_ops.load() / time) * 1000);
@@ -582,6 +569,9 @@ void *run_client(void *arg) {
 void run_follower(const std::string &server_address) {
     std::filesystem::remove_all("./consensus");
     std::filesystem::create_directory("./consensus");
+
+    std::string log_path = "./consensus/raft.log";
+    initialize_raft_log(log_path);
 
     /* start the grpc server for ConsensusComm */
     ConsensusCommImpl service;
