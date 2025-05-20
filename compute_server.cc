@@ -781,7 +781,14 @@ void *validation_handler(void *arg) {
 
     while (!ctx->end_flag) {
         // log_info(stderr, "WAIT: validation_handler[%d] waiting for blocks...", ctx->thread_index);
-        sem_wait(&bq.full);
+        // sem_wait(&bq.full);
+        int sem_result = sem_wait(&bq.full);
+        if (sem_result != 0) {
+            log_err("sem_wait failed with error: %s", strerror(errno));
+            // 可能需要休眠一下再重试
+            usleep(10000);  // 10ms
+            continue;
+        }
         // log_info(stderr, "WAKE: validation_handler[%d] woke up after sem_wait", ctx->thread_index);
         pthread_mutex_lock(&bq.mutex);
 
