@@ -982,7 +982,7 @@ class ComputeCommImpl final : public ComputeComm::Service {
             // log_info(stderr, "Semaphore value after post: %d", sem_value);
         }
         
-        log_info(stderr, "STREAM_END: Validator stream connection closed, processed %d blocks", block_count);
+        // log_info(stderr, "STREAM_END: Validator stream connection closed, processed %d blocks", block_count);
         return Status::OK;
     }
 
