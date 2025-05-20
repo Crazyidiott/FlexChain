@@ -388,6 +388,11 @@ class ConsensusCommImpl final : public ConsensusComm::Service {
     void rotate_log() {
         // 关闭当前日志文件
         logoo.close();
+
+        if (logoo.is_open()) {
+            log_err("Failed to close log file before rotation");
+            logoo.close(); // 再次尝试关闭
+        }
         
         // 删除最老的日志文件（如果超过最大数量）
         string oldest_log = "./consensus/raft.log." + to_string(max_log_files);
@@ -426,7 +431,7 @@ void run_leader(const std::string &server_address, std::string configfile) {
 
     ofstream logo("./consensus/raft.log", ios::out | ios::binary);
     assert(logo.is_open());
-    size_t max_log_size = 1024 * 1024 * 1024; // 1GB
+    size_t max_log_size = 500 * 1024 * 1024; // 1GB
     size_t current_log_size = 0;
     int max_log_files = 5;
 

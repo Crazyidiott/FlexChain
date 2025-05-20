@@ -36,8 +36,8 @@ class KVStableImpl final : public KVStable::Service {
    // 实现了 KVStable 服务的具体功能，这个服务是通过 gRPC 定义的
     public:
     explicit KVStableImpl() : block_store("blockchain.log", std::ios::out | std::ios::binary) {
-        max_log_size = static_cast<uint64_t>(5) * 1024 * 1024 * 1024; // 5GB
-        max_log_files = 3; // 保留3个历史日志
+        max_log_size = static_cast<uint64_t>(500) * 1024 * 1024; // 500MB
+        max_log_files = 5; // 保留3个历史日志
         current_log_size = 0;
 
         // 检查日志文件是否已存在，获取当前大小
