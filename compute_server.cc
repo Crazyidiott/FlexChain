@@ -1071,7 +1071,7 @@ void run_server(const string &server_address, bool is_validator) {
     CoreManager core_manager(1, 0, num_threads);
     g_core_manager = &core_manager;
     // std::vector<int> specific_cores = {0}; 
-    core_manager.initialize(2,{0,1});
+    core_manager.initialize(2,{1,2});
     core_manager.add_validation_thread(0);
     // #region original initialization code
     // pthread_t tid[num_threads];
@@ -1503,6 +1503,9 @@ int CoreManager::adjust_thread(int d_sim, int d_val) {
     
     // Process each core
     for (int core_id : active_cores) {
+        if(core_id == 0){
+            continue;
+        }
         // Handle simulation threads
         if (d_sim > 0) {
             // Add simulation threads
