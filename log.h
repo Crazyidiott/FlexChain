@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>  // 为abort()添加
 
 extern pthread_mutex_t logger_lock;
 
@@ -23,21 +24,39 @@ extern pthread_mutex_t logger_lock;
         pthread_mutex_unlock(&logger_lock);                   \
     } while (0)
 
-#define log_info(fp, M, ...)                         \
-    do {                                              \
-        pthread_mutex_lock(&logger_lock);             \
-        fprintf(fp, "[INFO]" M "\n", ##__VA_ARGS__); \
-        pthread_mutex_unlock(&logger_lock);           \
-        fflush(fp);                                   \
+#define log_info(fp, M, ...)                                  \
+    do {                                                      \
+        pthread_mutex_lock(&logger_lock);                     \
+        if (fp != NULL) {                                     \
+            int ret = fprintf(fp, "[INFO]" M "\n", ##__VA_ARGS__); \
+            if (ret < 0) {                                    \
+                fprintf(stderr, "[ERROR] Log write failed: %s\n", strerror(errno)); \
+            }                                                 \
+            if (fp != stderr && fp != stdout) {               \
+                fflush(fp);                                   \
+            }                                                 \
+        } else {                                              \
+            fprintf(stderr, "[ERROR] Attempted to log to NULL file pointer\n"); \
+        }                                                     \
+        pthread_mutex_unlock(&logger_lock);                   \
     } while (0)
 
 #ifdef DEBUG
-#define log_debug(fp, M, ...)                         \
-    do {                                             \
-        pthread_mutex_lock(&logger_lock);            \
-        fprintf(fp, "[DEBUG]" M "\n", ##__VA_ARGS__); \
-        pthread_mutex_unlock(&logger_lock);          \
-        fflush(fp);                                  \
+#define log_debug(fp, M, ...)                                 \
+    do {                                                      \
+        pthread_mutex_lock(&logger_lock);                     \
+        if (fp != NULL) {                                     \
+            int ret = fprintf(fp, "[DEBUG]" M "\n", ##__VA_ARGS__); \
+            if (ret < 0) {                                    \
+                fprintf(stderr, "[ERROR] Log write failed: %s\n", strerror(errno)); \
+            }                                                 \
+            if (fp != stderr && fp != stdout) {               \
+                fflush(fp);                                   \
+            }                                                 \
+        } else {                                              \
+            fprintf(stderr, "[ERROR] Attempted to log to NULL file pointer\n"); \
+        }                                                     \
+        pthread_mutex_unlock(&logger_lock);                   \
     } while (0)
 #else
 #define log_debug(fp, M, ...)
