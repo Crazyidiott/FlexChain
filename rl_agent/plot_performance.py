@@ -21,13 +21,13 @@ def plot_performance_data(csv_file, output_dir='plots'):
     plt.figure(figsize=(12, 8))
     
     # 绘制请求总数和完成任务数
-    plt.plot(df['elapsed_seconds'], df['request_total'], label='请求总数', marker='o', markersize=3, linestyle='-')
-    plt.plot(df['elapsed_seconds'], df['total_ops'], label='完成任务数', marker='x', markersize=3, linestyle='-')
+    plt.plot(df['elapsed_seconds'], df['request_total'], label='request total', marker='o', markersize=3, linestyle='-')
+    plt.plot(df['elapsed_seconds'], df['total_ops'], label='tasks completed', marker='x', markersize=3, linestyle='-')
     
     # 添加标题和标签
-    plt.title('系统性能随时间变化')
-    plt.xlabel('时间 (秒)')
-    plt.ylabel('操作数')
+    plt.title('performance')
+    plt.xlabel('time(s)')
+    plt.ylabel('operations')
     plt.legend()
     plt.grid(True)
     
@@ -42,12 +42,12 @@ def plot_performance_data(csv_file, output_dir='plots'):
     
     # 绘制更多图表：CPU和内存利用率
     plt.figure(figsize=(12, 8))
-    plt.plot(df['elapsed_seconds'], df['cpu_utilization'], label='CPU利用率', color='red')
-    plt.plot(df['elapsed_seconds'], df['memory_utilization'] * 100, label='内存利用率', color='blue')  # 乘100转为百分比
+    plt.plot(df['elapsed_seconds'], df['cpu_utilization'], label='CPU utiliazation', color='red')
+    plt.plot(df['elapsed_seconds'], df['memory_utilization'] * 100, label='memory utilization', color='blue')  # 乘100转为百分比
     
-    plt.title('资源利用率随时间变化')
-    plt.xlabel('时间 (秒)')
-    plt.ylabel('利用率 (%)')
+    plt.title('resource utilization')
+    plt.xlabel('time(s)')
+    plt.ylabel('utilization (%)')
     plt.legend()
     plt.grid(True)
     
@@ -65,12 +65,12 @@ def plot_performance_data(csv_file, output_dir='plots'):
                  df['ycsb_ops'], 
                  df['kmeans_ops'], 
                  df['bank_ops'],
-                 labels=['YCSB操作', 'KMEANS操作', 'BANK操作'],
+                 labels=['YCSB ops', 'KMEANS ops', 'BANK ops'],
                  colors=['#ff9999','#66b3ff','#99ff99'])
     
-    plt.title('不同类型操作数随时间变化')
-    plt.xlabel('时间 (秒)')
-    plt.ylabel('操作数')
+    plt.title('type of operations per time')
+    plt.xlabel('time(s)')
+    plt.ylabel('operations')
     plt.legend(loc='upper left')
     plt.grid(True)
     

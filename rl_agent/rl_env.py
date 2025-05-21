@@ -45,10 +45,10 @@ class FlexChainRLEnv(gym.Env):
         # 定义动作空间
         # 核心数调整 {-1, 0, 1}
         # 线程数调整 {-1, 0, 1}
-        # evict阈值调整 {-1000, -100, 0, 100, 1000}
+        # evict阈值调整 {-10000, -1000, -100, 0, 100, 1000, 10000}
         self.core_adjustments = [-1, 0, 1]
         self.thread_adjustments = [-1, 0, 1]
-        self.evict_thr_adjustments = [-1000, -100, 0, 100, 1000]
+        self.evict_thr_adjustments = [-10000, -1000, -100, 0, 100, 1000, 10000]
         
         # 动作空间为三个子空间的笛卡尔积
         self.action_space_n = spaces.Discrete(
@@ -312,7 +312,7 @@ class FlexChainRLEnv(gym.Env):
                 # return self.current_state.copy(), -10000.0, False, False, {"invalid_action": True}
                 thread_adj = 0
                 core_adj = 0
-            if current_evict_thr + evict_thr_adj < 100 or current_evict_thr + evict_thr_adj > 400000 :  # eveict_threshold的范围
+            if current_evict_thr + evict_thr_adj < 100 or current_evict_thr + evict_thr_adj > 39800 :  # eveict_threshold的范围
                 logger.warning(f"不可行动作: 当前evict_thr={current_evict_thr}, 尝试调整={evict_thr_adj}")
                 # 方式1: 返回大的负奖励，但不实际应用动作
                 # return self.current_state.copy(), -10000.0, False, False, {"invalid_action": True}
