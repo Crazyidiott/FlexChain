@@ -401,9 +401,9 @@ class FlexChainRLEnv(gym.Env):
         
         # 计算奖励
         # R_t = w_1(T_{t+1}/T_{max} - T_t/T_{max}) + w_2(MU_{t+1}-MU_t) + w_3(CU_{t+1}-CU_t)
-        throughput_change = (T_t1/T_max_t1) - (T_t/T_max_t)
-        memory_util_change = MU_t1 - MU_t
-        cpu_util_change = CU_t1 - CU_t
+        throughput_change = 1 - (T_t/T_max_t)
+        memory_util_change = 1 - MU_t
+        cpu_util_change = 1 - CU_t
         
         reward = self.scale_factor * (self.w1 * throughput_change + self.w2 * memory_util_change + self.w3 * cpu_util_change)
         

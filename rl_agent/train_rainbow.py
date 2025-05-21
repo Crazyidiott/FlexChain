@@ -36,7 +36,7 @@ parser = argparse.ArgumentParser(description='Rainbow for FlexChain Resource Opt
 parser.add_argument('--id', type=str, default='flexchain_experiment', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Maximum number of training steps')
+parser.add_argument('--T-max', type=int, default=int(1e5), metavar='STEPS', help='Maximum number of training steps')
 parser.add_argument('--max-episode-length', type=int, default=int(1e4), metavar='LENGTH', help='Max episode length (not strictly applicable)')
 parser.add_argument('--history-length', type=int, default=1, metavar='T', help='Number of consecutive states processed')
 parser.add_argument('--architecture', type=str, default='selfish_mining', choices=['canonical', 'data-efficient','selfish_mining'], metavar='ARCH', help='Network architecture')
