@@ -71,6 +71,7 @@ parser.add_argument('--memory', help='Path to save/load the memory from')
 parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t zip the memory file')
 parser.add_argument('--server-port', type=int, default=50055, help='gRPC服务器端口')
 parser.add_argument('--results-dir', type=str, default='results', help='Directory to store results')
+parser.add_argument('--model-mode', type=str, action='store_true', help='if it is rl but not baseline')
 
 # 交替训练与评估的相关参数
 parser.add_argument('--train-duration', type=int, default=1200, help='Training phase duration in seconds (default: 20 mins)')
@@ -171,8 +172,13 @@ def main():
         args.device = torch.device('cpu')
     
     # 创建环境
+    if args.model_mode:
+        mmm = True
+    else:
+        mmm = False
     env = FlexChainRLEnv(
-        server_port=args.server_port
+        server_port=args.server_port,
+        model_mode = mmm
     )
     
     # 获取动作空间大小
