@@ -307,7 +307,8 @@ void *client_thread(void *arg) {
             trans_per_interval *= 4;
         }
         if(cnt % (3 * min) == 0 && cnt != 0){
-            type = (type + 1) % 3;
+            // type = (type + 1) % 3;
+            type = type;
             if(type == 0){
                 log_info(stderr, "workload type is YCSB");
                 trans_per_interval = 25; //2000/s
