@@ -25,11 +25,12 @@ logger = logging.getLogger('FlexChainRL')
 class FlexChainRLEnv(gym.Env):
     """FlexChain强化学习环境类"""
     
-    def __init__(self, server_port=50055, history_length=5, data_log_dir='logs/performance_data'):
+    def __init__(self, server_port=50055, history_length=5, data_log_dir='logs/performance_data', baseline_mode = False):
         super().__init__()
         
         # 初始化参数
         self.server_port = server_port
+        self.baseline_mode = baseline_mode
         self.history_length = history_length
         self.server = None
         self.server_thread = None
@@ -373,11 +374,18 @@ class FlexChainRLEnv(gym.Env):
     def _apply_config(self, core_adj, thread_adj, evict_thr_adj):
         """应用配置变更，将在下一个状态请求时返回"""
         # 存储当前的配置，将在下一次SendSystemStates或GetSystemConfig请求时返回
-        self.current_config = rl_agent_pb2.SystemConfig(
-            core_adjustment=core_adj,
-            thread_adjustment=thread_adj,
-            evict_thr_adjustment=evict_thr_adj
-        )
+        if self.baseline_mode:
+            self.current_config = rl_agent_pb2.SystemConfig(
+                core_adjustment=0,
+                thread_adjustment=0,
+                evict_thr_adjustment=0
+            )
+        else:
+            self.current_config = rl_agent_pb2.SystemConfig(
+                core_adjustment=core_adj,
+                thread_adjustment=thread_adj,
+                evict_thr_adjustment=evict_thr_adj
+            )
         self.processing = False
 
     def _calculate_reward(self):
