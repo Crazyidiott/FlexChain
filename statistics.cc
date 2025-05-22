@@ -526,7 +526,7 @@ void* SystemStateManager::CollectionThread(void* arg) {
 
 double SystemStateManager::CalculateMemoryUtilization(uint32_t free_addrs, uint32_t evict_thr) {
     // 根据需求计算内存利用率: (400000 - free_addrs.size)/(400000 - evict_thr)
-    const int TOTAL_MEMORY = 400000; // 总内存大小
+    const int TOTAL_MEMORY = 396000; // 总内存大小
     
     if (TOTAL_MEMORY <= evict_thr) {
         return 1.0; // 防止除以零
