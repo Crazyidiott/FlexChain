@@ -315,7 +315,7 @@ class FlexChainRLEnv(gym.Env):
                 # return self.current_state.copy(), -10000.0, False, False, {"invalid_action": True}
                 thread_adj = 0
                 core_adj = 0
-            if current_evict_thr + evict_thr_adj < 100 or current_evict_thr + evict_thr_adj > 398000 :  # eveict_threshold的范围
+            if current_evict_thr + evict_thr_adj < 393000 or current_evict_thr + evict_thr_adj > 400000 :  # eveict_threshold的范围
                 logger.warning(f"不可行动作: 当前evict_thr={current_evict_thr}, 尝试调整={evict_thr_adj}")
                 # 方式1: 返回大的负奖励，但不实际应用动作
                 # return self.current_state.copy(), -10000.0, False, False, {"invalid_action": True}
@@ -409,7 +409,7 @@ class FlexChainRLEnv(gym.Env):
         CU_t = s_t[3] / 100.0  # cpu_utilization / 100.0 转为0-1的范围
         CU_t1 = s_t1[3] / 100.0
         
-        # 计算奖励
+        # 计算奖励b
         # R_t = w_1(T_{t+1}/T_{max} - T_t/T_{max}) + w_2(MU_{t+1}-MU_t) + w_3(CU_{t+1}-CU_t)
         throughput_change = (T_t/T_max_t) - 1
         memory_util_change = MU_t - 1
