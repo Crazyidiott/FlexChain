@@ -46,10 +46,10 @@ class FlexChainRLEnv(gym.Env):
         # 定义动作空间
         # 核心数调整 {-1, 0, 1}
         # 线程数调整 {-1, 0, 1}
-        # evict阈值调整 {-10000, -1000, -100, 0, 100, 1000, 10000}
+        # evict阈值调整 {-1000, -100, 0, 100, 1000}
         self.core_adjustments = [-1, 0, 1]
         self.thread_adjustments = [-1, 0, 1]
-        self.evict_thr_adjustments = [-10000, -1000, -100, 0, 100, 1000, 10000]
+        self.evict_thr_adjustments = [-1000, -100, 0, 100, 1000]
         
         # 动作空间为三个子空间的笛卡尔积
         self.action_space_n = spaces.Discrete(
