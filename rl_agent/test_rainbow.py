@@ -27,7 +27,7 @@ def test_during_training(args, env, T, dqn, val_mem, metrics, results_dir, evalu
     
     # 记录测试开始时间
     start_time = time.time()
-    test_duration = 600  # 默认测试时间为60秒
+    test_duration = 600  # 默认测试时间为600秒
     
     state, _ = env.reset()  # 获取当前环境状态
     total_reward = 0

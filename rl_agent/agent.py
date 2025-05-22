@@ -28,7 +28,7 @@ class Agent():
     self.norm_clip = args.norm_clip
     self.epsilon_start = 1
     self.epsilon_final = 0.1
-    self.epsilon_decay = 10000
+    self.epsilon_decay = 1200
     self.epsilon_step = 0
     self.epsilon = self.epsilon_start
     self.learn_start = args.learn_start
