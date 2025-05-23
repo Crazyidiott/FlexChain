@@ -427,11 +427,11 @@ bool SystemStateManager::SendStatesAndApplyConfig() {
 void* SystemStateManager::CollectionThread(void* arg) {
     SystemStateManager* manager = static_cast<SystemStateManager*>(arg);
     
-    int sampling_interval = 5; // 转换为秒
+    int interval_time = 5; // 转换为秒
     while (manager->running_) {
         // 睡眠指定间隔
         // usleep(1000 * manager->interval_milliseconds);
-        sleep(sampling_interval);
+        sleep(interval_time);
         
         // 创建新的系统状态
         SystemState state;
@@ -446,7 +446,6 @@ void* SystemStateManager::CollectionThread(void* arg) {
         long current_total_ops = total_ops.load();
         
         // 计算interval内的操作数, 以秒为单位
-        int interval_time = 1;
         long interval_ycsb_ops =  (current_ycsb_ops - manager->last_ycsb_ops_)/interval_time;
         long interval_kmeans_ops =  (current_kmeans_ops - manager->last_kmeans_ops_)/interval_time;
         long interval_bank_ops =  (current_bank_ops - manager->last_bank_ops_)/interval_time;
