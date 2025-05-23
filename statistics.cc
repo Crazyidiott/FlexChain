@@ -427,10 +427,11 @@ bool SystemStateManager::SendStatesAndApplyConfig() {
 void* SystemStateManager::CollectionThread(void* arg) {
     SystemStateManager* manager = static_cast<SystemStateManager*>(arg);
     
+    int sampling_interval = 3 // 转换为秒
     while (manager->running_) {
         // 睡眠指定间隔
         // usleep(1000 * manager->interval_milliseconds);
-        sleep(1);
+        sleep(sampling_interval);
         
         // 创建新的系统状态
         SystemState state;
@@ -512,13 +513,14 @@ void* SystemStateManager::CollectionThread(void* arg) {
         
         // 记录日志
         log_info(stderr,
-                "[State] interval_ops: YCSB=%d, KMEANS=%d, BANK=%d, TOTAL=%d |\n "
+                "[State] interval_seconds=%d, interval_ops: YCSB=%d, KMEANS=%d, BANK=%d, TOTAL=%d |\n "
                 "CPU: %.2f%%, Memory: %.2f%%, Cores: %d, Threads/Core: %d, EVICT_THR: %d\n"
                 "cache_hit: %ld, sst_cnt: %ld, total_ops: %ld",
+                sampling_interval,
                 state.ycsb_ops(), state.kmeans_ops(), state.bank_ops(), state.total_ops(),
                 state.cpu_utilization(), state.memory_utilization()*100, 
                 state.core_count(), state.sim_threads_per_core(), state.evict_threshold(),
-                cache_hit.load(), sst_count.load(),total_ops.load());
+                cache_hit.load(), sst_count.load(), total_ops.load());
     }
     
     return NULL;
