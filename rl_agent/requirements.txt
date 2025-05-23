@@ -6,3 +6,4 @@ gymnasium
 numpy
 pandas
 grpcio-tools
+matplotlib

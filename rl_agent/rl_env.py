@@ -48,25 +48,29 @@ class FlexChainRLEnv(gym.Env):
         # 线程数调整 {-1, 0, 1}
         # evict阈值调整 {-1000, -100, 0, 100, 1000}
         self.core_adjustments = [-1, 0, 1]
-        self.thread_adjustments = [-1, 0, 1]
-        self.evict_thr_adjustments = [-1000, -100, 0, 100, 1000]
+        self.thread_adjustments = [-1, 0, 1]  
+        # 大幅简化evict_threshold调整，因为它有延迟效应
+        self.evict_thr_adjustments = [-2000, 0, 2000]  # 只保留3个选择
         
-        # 动作空间为三个子空间的笛卡尔积
+        # 动作空间大小：3*3*3 = 27
         self.action_space_n = spaces.Discrete(
             len(self.core_adjustments) * 
             len(self.thread_adjustments) * 
             len(self.evict_thr_adjustments)
         )
-        
+    
+        # 重新定义观察空间 - 归一化后的范围
         # 定义观察空间 (状态空间)
         # 根据SystemState中的字段定义
         # [ycsb_ops, kmeans_ops, bank_ops, cpu_utilization, memory_utilization, 
         #  total_ops, core_count, sim_threads_per_core, evict_threshold]
         self.observation_space = spaces.Box(
-            low=np.array([0, 0, 0, 0, 0, 0, 1, 1, 400000]),
-            high=np.array([np.inf, np.inf, np.inf, 100, 1, np.inf, np.inf, np.inf, np.inf]),
+            low=np.array([0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            high=np.array([1, 1, 1, 1, 1, 1, 1, 1, 1]),
             dtype=np.float32
         )
+        
+
         
         # 让奖励的数值大一点
         self.scale_factor = 100
@@ -198,11 +202,40 @@ class FlexChainRLEnv(gym.Env):
         self.server_thread = threading.Thread(target=server_thread_func)
         self.server_thread.daemon = True
         self.server_thread.start()
+    
+    def _normalize_state(self, state_array):
+        """归一化状态到合理范围"""
+        normalized_state = np.zeros_like(state_array)
+        
+        # 归一化请求数 (0-20000范围)
+        normalized_state[0] = min(state_array[0] / 20000.0, 1.0)  # ycsb_ops
+        normalized_state[1] = min(state_array[1] / 2000.0, 1.0)   # kmeans_ops  
+        normalized_state[2] = min(state_array[2] / 2000.0, 1.0)   # bank_ops
+        
+        # CPU利用率已经是0-100，转换为0-1
+        normalized_state[3] = state_array[3] / 100.0
+        
+        # 内存利用率已经是0-1
+        normalized_state[4] = state_array[4]
+        
+        # 归一化total_ops (0-20000范围)
+        normalized_state[5] = min(state_array[5] / 20000.0, 1.0)
+        
+        # 归一化core_count (2-8范围，大多数情况不会超过8核)
+        normalized_state[6] = (state_array[6] - 2.0) / 6.0
+        
+        # 归一化线程数 (1-4范围，实际很少超过4)
+        normalized_state[7] = (state_array[7] - 1.0) / 3.0
+        
+        # 归一化evict_threshold (390000-400000范围)
+        normalized_state[8] = (state_array[8] - 390000.0) / 10000.0
+        
+        return normalized_state
 
     def _add_state(self, state_proto):
         """添加一个新的系统状态到历史中"""
         # 转换proto消息为numpy数组
-        state_array = np.array([
+        raw_state = np.array([
             state_proto.ycsb_ops,
             state_proto.kmeans_ops, 
             state_proto.bank_ops,
@@ -214,10 +247,17 @@ class FlexChainRLEnv(gym.Env):
             state_proto.evict_threshold
         ], dtype=np.float32)
         
+        # 归一化状态
+        state_array = self._normalize_state(raw_state)
+        
         # 更新状态
         self.last_state = self.current_state
         self.current_state = state_array
         self.current_ts = state_proto.timestamp
+        
+        # 存储原始状态用于计算奖励
+        self.raw_current_state = raw_state
+        self.raw_last_state = getattr(self, 'raw_current_state', raw_state.copy())
         
         # 将状态添加到历史中
         self.latest_states.append(state_array)
@@ -291,82 +331,75 @@ class FlexChainRLEnv(gym.Env):
         # 将动作ID转换为具体的调整参数
         core_adj, thread_adj, evict_thr_adj = self._action_to_adjustments(action)
 
-        # 不可用动作筛选
-        if self.current_state is not None:
-            current_core_count = self.current_state[6]  # core_count的索引
-            current_sim_count = self.current_state[7]  # sim_threads_per_core的索引
-            current_evict_thr = self.current_state[8]  # evict_threshold的索引
-            if current_core_count + core_adj < 2 :  # 确保核心数不少于2
-                logger.warning(f"不可行动作: 当前核心数={current_core_count}, 尝试调整={core_adj}")
-                # 方式1: 返回大的负奖励，但不实际应用动作
-                # return self.current_state.copy(), -10000.0, False, False, {"invalid_action": True}
-                # 方式2: 修改动作为安全的动作
-                core_adj = 0  # 或者 core_adj = max(1 - current_core_count, core_adj)
-                thread_adj = 0
-            if current_sim_count + thread_adj < 1 :  # 确保线程数不少于1
-                logger.warning(f"不可行动作: 当前线程数={current_sim_count},尝试调整thread={thread_adj}")
-                # 方式1: 返回大的负奖励，但不实际应用动作
-                # return self.current_state.copy(), -10000.0, False, False, {"invalid_action": True}
-                thread_adj = 0
+        # 使用原始状态进行动作有效性检查
+        if hasattr(self, 'raw_current_state') and self.raw_current_state is not None:
+            current_core_count = self.raw_current_state[6]
+            current_sim_count = self.raw_current_state[7]
+            current_evict_thr = self.raw_current_state[8]
+            
+            # 更严格的约束检查
+            if current_core_count + core_adj < 2:
+                logger.warning(f"动作修正: 核心数调整 {core_adj} -> 0 (当前={current_core_count})")
                 core_adj = 0
-            if (current_sim_count + thread_adj) * (current_core_count + core_adj) > 31:  # 确保线程数不超过31
-                logger.warning(f"总线程数超过限制: 当前线程数={current_sim_count}, 尝试调整thread={thread_adj}, 尝试调整core={core_adj}")
-                # 方式1: 返回大的负奖励，但不实际应用动作
-                # return self.current_state.copy(), -10000.0, False, False, {"invalid_action": True}
-                thread_adj = 0
-                core_adj = 0
-            if current_evict_thr + evict_thr_adj < 393000 or current_evict_thr + evict_thr_adj > 400000 :  # eveict_threshold的范围
-                logger.warning(f"不可行动作: 当前evict_thr={current_evict_thr}, 尝试调整={evict_thr_adj}")
-                # 方式1: 返回大的负奖励，但不实际应用动作
-                # return self.current_state.copy(), -10000.0, False, False, {"invalid_action": True}
-                evict_thr_adj = 0
                 
+            if current_sim_count + thread_adj < 1:
+                logger.warning(f"动作修正: 线程数调整 {thread_adj} -> 0 (当前={current_sim_count})")
+                thread_adj = 0
+                
+            if (current_sim_count + thread_adj) * (current_core_count + core_adj) > 31:
+                logger.warning(f"动作修正: 总线程数超限，重置调整为0")
+                thread_adj = 0
+                core_adj = 0
+                
+            if current_evict_thr + evict_thr_adj < 390000 or current_evict_thr + evict_thr_adj > 400000:
+                logger.warning(f"动作修正: evict_thr调整 {evict_thr_adj} -> 0 (当前={current_evict_thr})")
+                evict_thr_adj = 0
 
-        logger.info(f"执行动作: core_adj={core_adj}, thread_adj={thread_adj}, evict_thr_adj={evict_thr_adj}\n当前状态={self.current_state}")
+        logger.info(f"执行动作: core_adj={core_adj}, thread_adj={thread_adj}, evict_thr_adj={evict_thr_adj}")
         
         # 应用配置变更
         self._apply_config(core_adj, thread_adj, evict_thr_adj)
         
-        # 动态等待系统状态更新
-        # 使用超时机制确保不会无限等待
-        max_wait_time = 30  # 最长等待30秒
+        # 等待系统状态更新
+        max_wait_time = 10  # 减少等待时间到10秒
         start_time = time.time()
         state_updated = False
         
         while not state_updated and (time.time() - start_time < max_wait_time):
-            # 检查是否有新状态到达
-            if self.current_state is not None and not self.last_ts == self.current_ts:
+            if hasattr(self, 'current_ts') and hasattr(self, 'last_ts') and self.current_ts != self.last_ts:
                 state_updated = True
                 self.last_ts = self.current_ts
             else:
-                time.sleep(1)  # 短暂等待后再次检查
+                time.sleep(0.5)  # 减少轮询频率
         
         if not state_updated:
-            logger.warning(f"等待状态更新超时 ({max_wait_time}秒)，使用最新可用状态")
+            logger.warning(f"等待状态更新超时 ({max_wait_time}秒)")
+            # 超时时给予小的负奖励
+            reward = -1.0
+        else:
+            # 计算奖励
+            reward = self._calculate_reward() if pre_action_state is not None else 0
         
-        # 计算奖励
-        reward = self._calculate_reward() if pre_action_state is not None and self.current_state is not None else 0
+        # 检查是否需要重置到baseline
+        if self.steps_count % 500 == 0:  # 每500步重置一次
+            logger.info("重置到baseline配置")
+            self._apply_config(-int(self.raw_current_state[6]-4), 
+                            -int(self.raw_current_state[7]-1), 
+                            int(390000-self.raw_current_state[8]))
         
-        # 在持续环境中，我们定义"完成"的概念
-        # 例如，如果达到预定的步数限制，或者出现特定条件
-        max_steps = 1000  # 示例：最大步数
         terminated = False
-        truncated = False # self.steps_count >= max_steps
+        truncated = False
         
-        # 返回最新观察、奖励等
         observation = self.latest_states[-1] if self.latest_states else np.zeros(self.observation_space.shape)
         info = {
             'steps': self.steps_count,
-            'last_adjustments': {
-                'core': core_adj,
-                'thread': thread_adj,
-                'evict_thr': evict_thr_adj
-            },
-            'wait_time': time.time() - start_time
+            'last_adjustments': {'core': core_adj, 'thread': thread_adj, 'evict_thr': evict_thr_adj},
+            'wait_time': time.time() - start_time,
+            'raw_state': self.raw_current_state.tolist() if hasattr(self, 'raw_current_state') else None
         }
-    
+        
         return observation, reward, terminated, truncated, info
-
+    
     def action_space(self):
         """返回动作空间的大小"""
         return self.action_space_n.n
@@ -389,38 +422,82 @@ class FlexChainRLEnv(gym.Env):
         self.processing = False
 
     def _calculate_reward(self):
-        """计算奖励值，基于状态变化"""
-        # 获取前一个状态和当前状态
-        s_t = self.last_state
-        s_t1 = self.current_state
+        """计算奖励值，确保奖励信号积极且有指导性"""
+        if not hasattr(self, 'raw_last_state') or not hasattr(self, 'raw_current_state'):
+            return 0.0
         
-        # 提取相关指标
-        T_t = s_t[5]  # total_ops
-        T_t1 = s_t1[5]
+        # 使用原始状态计算奖励
+        s_t = self.raw_last_state
+        s_t1 = self.raw_current_state
         
-        # 使用请求数作为T_max进行归一化
-
-        T_max_t = max(s_t[0]+s_t[1]+s_t[2], 1)  # 避免除以0
-        T_max_t1 = max(s_t1[0]+s_t1[1]+s_t1[2], 1)
+        # 1. 吞吐量完成率奖励 (最重要)
+        total_requests = s_t1[0] + s_t1[1] + s_t1[2]  # 总请求数
+        completed_ops = s_t1[5]  # total_ops
         
-        MU_t = s_t[4]  # memory_utilization
-        MU_t1 = s_t1[4]
+        if total_requests > 0:
+            completion_rate = min(completed_ops / total_requests, 1.0)
+            throughput_reward = completion_rate * 10.0  # 0-10分
+        else:
+            throughput_reward = 0.0
         
-        CU_t = s_t[3] / 100.0  # cpu_utilization / 100.0 转为0-1的范围
-        CU_t1 = s_t1[3] / 100.0
+        # 2. 吞吐量改善奖励
+        throughput_change = s_t1[5] - s_t[5]
+        if throughput_change > 0:
+            improvement_reward = min(throughput_change / max(total_requests, 1), 1.0) * 5.0  # 0-5分
+        else:
+            improvement_reward = max(throughput_change / max(total_requests, 1), -1.0) * 2.0  # -2到0分
         
-        # 计算奖励b
-        # R_t = w_1(T_{t+1}/T_{max} - T_t/T_{max}) + w_2(MU_{t+1}-MU_t) + w_3(CU_{t+1}-CU_t)
-        throughput_change = (T_t/T_max_t) - 1
-        memory_util_change = MU_t - 1
-        cpu_util_change = CU_t - 1
+        # 3. CPU效率奖励 (目标70-85%)
+        cpu_util = s_t1[3] / 100.0  # 转换为0-1
+        if 0.70 <= cpu_util <= 0.85:
+            cpu_reward = 3.0  # 在理想范围内给满分
+        elif 0.60 <= cpu_util <= 0.90:
+            cpu_reward = 1.5  # 可接受范围给一半分
+        else:
+            cpu_reward = 0.0  # 其他情况不给分
         
-        reward = self.scale_factor * (self.w1 * throughput_change + self.w2 * memory_util_change + self.w3 * cpu_util_change)
+        # 4. 内存效率奖励 (目标80-95%)
+        memory_util = s_t1[4]
+        if 0.80 <= memory_util <= 0.95:
+            memory_reward = 2.0
+        elif 0.70 <= memory_util <= 0.99:
+            memory_reward = 1.0
+        else:
+            memory_reward = 0.0
         
-        logger.info(f"奖励计算: throughput_change={throughput_change}, memory_util_change={memory_util_change}, "
-                   f"cpu_util_change={cpu_util_change}, reward={reward}")
+        # 5. 资源效率奖励 (避免过度分配)
+        core_count = s_t1[6]
+        thread_count = s_t1[7]
+        total_threads = core_count * thread_count
         
-        return reward
+        # 根据当前workload判断是否过度分配
+        if total_requests > 0:
+            threads_per_100_requests = total_threads * 100.0 / total_requests
+            if threads_per_100_requests <= 0.5:  # 每100个请求用0.5个线程以内认为高效
+                efficiency_reward = 2.0
+            elif threads_per_100_requests <= 1.0:
+                efficiency_reward = 1.0
+            else:
+                efficiency_reward = 0.0
+        else:
+            efficiency_reward = 1.0  # 没有请求时保持现状
+        
+        # 综合奖励 (总分0-22分)
+        total_reward = (
+            throughput_reward * 0.4 +      # 40% - 吞吐量完成率
+            improvement_reward * 0.3 +     # 30% - 吞吐量改善  
+            cpu_reward * 0.15 +            # 15% - CPU效率
+            memory_reward * 0.1 +          # 10% - 内存效率
+            efficiency_reward * 0.05       # 5% - 资源效率
+        )
+        
+        logger.info(f"奖励详情: 完成率={completion_rate:.3f}({throughput_reward:.2f}), "
+                f"改善={throughput_change}({improvement_reward:.2f}), "
+                f"CPU={cpu_util:.3f}({cpu_reward:.2f}), "
+                f"内存={memory_util:.3f}({memory_reward:.2f}), "
+                f"效率={efficiency_reward:.2f}, 总奖励={total_reward:.2f}")
+        
+        return total_reward
 
     def close(self):
         """关闭环境，停止gRPC服务器，并关闭日志文件"""

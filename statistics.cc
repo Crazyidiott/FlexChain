@@ -516,7 +516,7 @@ void* SystemStateManager::CollectionThread(void* arg) {
                 "CPU: %.2f%%, Memory: %.2f%%, Cores: %d, Threads/Core: %d, EVICT_THR: %d\n"
                 "cache_hit: %ld, sst_cnt: %ld, total_ops: %ld",
                 state.ycsb_ops(), state.kmeans_ops(), state.bank_ops(), state.total_ops(),
-                state.cpu_utilization(), state.memory_utilization(), 
+                state.cpu_utilization(), state.memory_utilization()*100, 
                 state.core_count(), state.sim_threads_per_core(), state.evict_threshold(),
                 cache_hit.load(), sst_count.load(),total_ops.load());
     }

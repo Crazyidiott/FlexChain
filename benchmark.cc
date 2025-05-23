@@ -283,7 +283,7 @@ string get_balance_str(uint64_t balance, size_t length) {
 }
 
 void *client_thread(void *arg) {
-    int trans_per_interval = 25;
+    int trans_per_interval = 3;
     int interval = 50000; // 50  ms
     int min = 60 * 10 * 2; // 1 min (乘了interval之后)
 
