@@ -155,8 +155,9 @@ def main():
         'rewards': [], 
         'Qs': [], 
         'best_avg_reward': -float('inf'),
-        'training_phase': [],  # 记录是否处于训练阶段
-        'performance_history': []  # 时间戳和性能指标
+        'performance_history': [],
+        'episode_rewards': [],  # 新增：记录episode奖励
+        'evaluation_scores': []  # 新增：记录评估分数
     }
     
     # 设置随机种子
@@ -249,105 +250,96 @@ def main():
     log(args.log_file, 'Starting training...')
     dqn.train()
     
-    # 初始化阶段控制变量
     training_phase = True
-    phase_switch_time = time.time() + args.train_duration
-    best_model_state = None
-    best_performance = None
-    current_model_state = None
-    performance_history = []
+    steps_in_current_phase = 0
+    train_phase_length = 2000  # 每2000步一个训练阶段
+    eval_phase_length = 500    # 每500步一个评估阶段
     
-    T = 0  # 总步数计数器
+    best_model_state = None
+    best_performance = -float('inf')
+    current_episode_reward = 0
+    episode_step_count = 0
+    
+    T = 0
     done = True
     
-    # 使用tqdm显示进度条
     pbar = tqdm(total=args.T_max)
     
     try:
         while T < args.T_max:
-            # 检查是否需要切换阶段
-            current_time = time.time()
-            if current_time > phase_switch_time:
-                if training_phase:
-                    # 从训练切换到评估
-                    log(args.log_file, "Switching from training to evaluation phase")
-                    training_phase = False
-                    phase_switch_time = current_time + args.eval_duration
+            # 修复3: 基于步数的阶段切换
+            if training_phase and steps_in_current_phase >= train_phase_length:
+                # 从训练切换到评估
+                log(args.log_file, f"Step {T}: Switching to evaluation phase")
+                training_phase = False
+                steps_in_current_phase = 0
+                dqn.eval()
+                
+                # 保存当前训练的模型用于评估
+                current_model_for_eval = copy.deepcopy(dqn.online_net.state_dict())
+                
+            elif not training_phase and steps_in_current_phase >= eval_phase_length:
+                # 从评估切换到训练
+                log(args.log_file, f"Step {T}: Switching to training phase")
+                
+                # 修复4: 正确的性能评估
+                if len(metrics['episode_rewards']) > 0:
+                    recent_performance = np.mean(metrics['episode_rewards'][-10:])  # 最近10个episode的平均奖励
+                    metrics['evaluation_scores'].append(recent_performance)
                     
-                    # 保存当前模型状态用于评估
-                    current_model_state = copy.deepcopy(dqn.online_net.state_dict())
-                    dqn.eval()  # 切换到评估模式
-                else:
-                    # 从评估切换到训练
-                    log(args.log_file, "Switching from evaluation to training phase")
-                    
-                    # 计算评估阶段的性能
-                    window_performance = calculate_window_performance(performance_history)
-                    
-                    # 检查是否需要更新最佳模型
-                    update_best = False
-                    if best_performance is None:
-                        update_best = True
-                        log(args.log_file, f"Initial performance benchmark set: {window_performance}")
-                    elif window_performance > best_performance * args.performance_threshold:
-                        update_best = True
-                        improvement = (window_performance / best_performance - 1) * 100
-                        log(args.log_file, f"Performance improved by {improvement:.2f}% - Saving new best model")
-                    
-                    if update_best:
-                        best_performance = window_performance
-                        best_model_state = current_model_state
-                        # 保存最佳模型
+                    # 修复5: 正确的模型保存逻辑
+                    if recent_performance > best_performance:
+                        improvement = (recent_performance - best_performance) if best_performance > -float('inf') else 0
+                        log(args.log_file, f"New best performance: {recent_performance:.4f} (improvement: +{improvement:.4f})")
+                        
+                        best_performance = recent_performance
+                        best_model_state = current_model_for_eval  # 保存正确的模型状态
+                        
+                        # 立即保存最佳模型
                         torch.save(best_model_state, os.path.join(results_dir, 'best_model.pth'))
-                    
-                    # 检查是否性能退化需要回滚
-                    if best_performance is not None and window_performance < best_performance * args.degradation_threshold:
-                        degradation = (1 - window_performance / best_performance) * 100
-                        log(args.log_file, f"Performance degraded by {degradation:.2f}% - Rolling back to best model")
+                        
+                    # 检查是否需要回滚（性能严重下降）
+                    elif recent_performance < best_performance * 0.8 and best_model_state is not None:
+                        degradation = (best_performance - recent_performance) / best_performance * 100
+                        log(args.log_file, f"Performance degraded by {degradation:.1f}% - Rolling back to best model")
                         dqn.online_net.load_state_dict(best_model_state)
-                    
-                    training_phase = True
-                    phase_switch_time = current_time + args.train_duration
-                    dqn.train()  # 切换回训练模式
+                
+                training_phase = True
+                steps_in_current_phase = 0
+                dqn.train()
             
             # 重置环境（如果需要）
             if done:
+                if current_episode_reward != 0:
+                    metrics['episode_rewards'].append(current_episode_reward)
+                    log(args.log_file, f"Episode finished: reward={current_episode_reward:.2f}, steps={episode_step_count}")
+                
                 state, _ = env.reset()
+                current_episode_reward = 0
+                episode_step_count = 0
             
-            # 在训练阶段重置噪声（如果使用）
+            # 动作选择和执行
             if training_phase and T % args.replay_frequency == 0:
                 dqn.reset_noise()
             
-            # 选择动作
+            action = dqn.act(state)
             if training_phase:
-                action = dqn.act(state)  # 训练模式，可能包含探索
-                dqn.update_epsilon()  # 更新epsilon
-            else:
-                action = dqn.act(state)  # 评估模式，确定性动作
+                dqn.update_epsilon()
             
-            # 执行动作
+            # 等待环境处理
             while not env.processing:
-                time.sleep(0.1)  # 等待环境处理
+                time.sleep(0.1)
+            
             next_state, reward, done, truncated, info = env.step(action)
             
-            # 记录性能（仅在评估阶段）
-            if not training_phase:
-                current_performance = reward  # 使用奖励作为性能指标
-                performance_history.append((time.time(), current_performance))
-                
-                # 清理旧的性能记录（超过24小时的）
-                old_threshold = time.time() - 86400
-                performance_history = [(t, p) for t, p in performance_history if t >= old_threshold]
+            # 累积episode奖励
+            current_episode_reward += reward
+            episode_step_count += 1
             
-            # 奖励裁剪（如果启用）
-            if args.reward_clip > 0:
-                reward = max(min(reward, args.reward_clip), -args.reward_clip)
-            
-            # 在训练阶段将经验添加到记忆中
+            # 修复6: 在训练阶段才进行学习
             if training_phase:
                 mem.append(state, action, reward, done)
                 
-                # 训练网络
                 if T >= args.learn_start:
                     if args.prior_mem:
                         mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)
@@ -355,53 +347,48 @@ def main():
                     if T % args.replay_frequency == 0:
                         dqn.learn(mem)
                     
-                    # 软更新目标网络
                     if T % args.soft_target_update == 0:
                         dqn.update_target_net()
-                    
-                    # 保存检查点
-                    if args.checkpoint_interval > 0 and T % args.checkpoint_interval == 0:
-                        checkpoint_path = os.path.join(results_dir, f'checkpoint_{T}.pth')
-                        os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
-                        dqn.save(checkpoint_path)
-                        log(args.log_file, f'Checkpoint saved at step {T}: {checkpoint_path}')
             
-            # 更新状态
+            # 定期保存检查点
+            if T % 1000 == 0:
+                checkpoint_path = os.path.join(results_dir, f'checkpoint_{T}.pth')
+                torch.save(dqn.online_net.state_dict(), checkpoint_path)
+                save_memory(mem, args.memory, args.disable_bzip_memory)
+                
+                # 记录训练状态
+                avg_reward = np.mean(metrics['episode_rewards'][-20:]) if len(metrics['episode_rewards']) >= 20 else 0
+                log(args.log_file, f"Step {T}: Phase={'Train' if training_phase else 'Eval'}, "
+                          f"Avg Reward (last 20): {avg_reward:.3f}, Best: {best_performance:.3f}")
+            
             state = next_state
             T += 1
+            steps_in_current_phase += 1
             pbar.update(1)
-            
-            # 定期保存内存
-            if T % 10000 == 0 and training_phase:
-                save_memory(mem, args.memory, args.disable_bzip_memory)
-                log(args.log_file, f'Memory saved at step {T}')
         
-        # 训练结束
-        log(args.log_file, f'Training completed after {T} steps')
-        
-        # 保存最终模型和内存
+        # 训练结束，保存最终模型
         final_model_path = os.path.join(results_dir, 'final_model.pth')
-        os.makedirs(os.path.dirname(final_model_path), exist_ok=True)
-        dqn.save(final_model_path)
-        save_memory(mem, args.memory, args.disable_bzip_memory)
+        torch.save(dqn.online_net.state_dict(), final_model_path)
         
-        log(args.log_file, f'Final model saved: {final_model_path}')
-        log(args.log_file, f'Final memory saved: {args.memory}')
+        # 如果最佳模型更好，复制为最终模型
+        if best_model_state is not None and best_performance > np.mean(metrics['episode_rewards'][-10:]):
+            torch.save(best_model_state, final_model_path)
+            log(args.log_file, f"Best model (performance: {best_performance:.3f}) saved as final model")
+        
+        log(args.log_file, f'Training completed after {T} steps')
         
     except KeyboardInterrupt:
         log(args.log_file, f'Training interrupted after {T} steps')
         
-        # 保存中断时的模型和内存
-        interrupted_model_path = os.path.join(results_dir, 'interrupted_model.pth')
-        os.makedirs(os.path.dirname(interrupted_model_path), exist_ok=True)
-        dqn.save(interrupted_model_path)
-        save_memory(mem, args.memory, args.disable_bzip_memory)
+        # 保存中断时的状态
+        interrupted_path = os.path.join(results_dir, 'interrupted_model.pth')
+        torch.save(dqn.online_net.state_dict(), interrupted_path)
         
-        log(args.log_file, f'Interrupted model saved: {interrupted_model_path}')
-        log(args.log_file, f'Memory saved: {args.memory}')
+        # 如果有最佳模型，也保存一份
+        if best_model_state is not None:
+            torch.save(best_model_state, os.path.join(results_dir, 'best_model_interrupted.pth'))
     
     finally:
-        # 关闭环境和进度条
         env.close()
         pbar.close()
 
