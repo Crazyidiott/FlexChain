@@ -283,7 +283,7 @@ string get_balance_str(uint64_t balance, size_t length) {
 }
 
 void *client_thread(void *arg) {
-    int trans_per_interval = 50;
+    int trans_per_interval = 25;
     int interval = 50000; // 50  ms
     int min = 60 * 10 * 2; // 1 min (乘了interval之后)
 
@@ -307,11 +307,11 @@ void *client_thread(void *arg) {
             trans_per_interval *= 4;
         }
         if(cnt % (3 * min) == 0 && cnt != 0){
-            // type = (type + 1) % 3;
-            type = type;
+            type = (type + 1) % 3;
+            // type = type;
             if(type == 0){
                 log_info(stderr, "workload type is YCSB");
-                trans_per_interval = 50; //2000/s
+                trans_per_interval = 25; //2000/s
             }
             else if(type == 1){
                 log_info(stderr, "workload type is KMEANS");
