@@ -422,46 +422,58 @@ class FlexChainRLEnv(gym.Env):
         self.processing = False
 
     def _calculate_reward(self):
-        """计算奖励值，确保奖励信号积极且有指导性"""
+        """计算奖励值，基于绝对性能而非变化量"""
         if not hasattr(self, 'raw_last_state') or not hasattr(self, 'raw_current_state'):
             return 0.0
         
         # 使用原始状态计算奖励
-        s_t = self.raw_last_state
         s_t1 = self.raw_current_state
         
-        # 1. 吞吐量完成率奖励 (最重要)
+        # 1. 吞吐量完成率奖励 (核心指标)
         total_requests = s_t1[0] + s_t1[1] + s_t1[2]  # 总请求数
         completed_ops = s_t1[5]  # total_ops
         
         if total_requests > 0:
             completion_rate = min(completed_ops / total_requests, 1.0)
-            throughput_reward = completion_rate * 10.0  # 0-10分
+            # 使用非线性奖励，完成率越高奖励越大
+            throughput_reward = completion_rate ** 2 * 10.0  # 0-10分
         else:
-            throughput_reward = 0.0
+            throughput_reward = 1.0  # 没有请求时给基础分
         
-        # 2. 吞吐量改善奖励
-        throughput_change = s_t1[5] - s_t[5]
-        if throughput_change > 0:
-            improvement_reward = min(throughput_change / max(total_requests, 1), 1.0) * 5.0  # 0-5分
+        # 2. 吞吐量改善奖励 (相对于上一步)
+        if hasattr(self, 'raw_last_state'):
+            throughput_change = s_t1[5] - self.raw_last_state[5]
+            if throughput_change > 0:
+                improvement_reward = min(throughput_change / max(total_requests, 1), 1.0) * 5.0
+            else:
+                improvement_reward = max(throughput_change / max(total_requests, 1), -0.5) * 2.0
         else:
-            improvement_reward = max(throughput_change / max(total_requests, 1), -1.0) * 2.0  # -2到0分
+            improvement_reward = 0.0
         
         # 3. CPU效率奖励 (目标70-85%)
-        cpu_util = s_t1[3] / 100.0  # 转换为0-1
+        cpu_util = s_t1[3] / 100.0
         if 0.70 <= cpu_util <= 0.85:
-            cpu_reward = 3.0  # 在理想范围内给满分
+            cpu_reward = 3.0
         elif 0.60 <= cpu_util <= 0.90:
-            cpu_reward = 1.5  # 可接受范围给一半分
+            # 距离理想区间的距离
+            if cpu_util < 0.70:
+                distance = 0.70 - cpu_util
+            else:
+                distance = cpu_util - 0.85
+            cpu_reward = max(0, 3.0 - distance * 10)  # 线性衰减
         else:
-            cpu_reward = 0.0  # 其他情况不给分
+            cpu_reward = 0.0
         
         # 4. 内存效率奖励 (目标80-95%)
         memory_util = s_t1[4]
         if 0.80 <= memory_util <= 0.95:
             memory_reward = 2.0
         elif 0.70 <= memory_util <= 0.99:
-            memory_reward = 1.0
+            if memory_util < 0.80:
+                distance = 0.80 - memory_util
+            else:
+                distance = memory_util - 0.95
+            memory_reward = max(0, 2.0 - distance * 5)
         else:
             memory_reward = 0.0
         
@@ -470,35 +482,43 @@ class FlexChainRLEnv(gym.Env):
         thread_count = s_t1[7]
         total_threads = core_count * thread_count
         
-        # 根据当前workload判断是否过度分配
         if total_requests > 0:
-            threads_per_100_requests = total_threads * 100.0 / total_requests
-            if threads_per_100_requests <= 0.5:  # 每100个请求用0.5个线程以内认为高效
+            # 理想情况：每个线程处理50-200个请求
+            requests_per_thread = total_requests / total_threads
+            if 50 <= requests_per_thread <= 200:
                 efficiency_reward = 2.0
-            elif threads_per_100_requests <= 1.0:
+            elif 20 <= requests_per_thread <= 300:
                 efficiency_reward = 1.0
             else:
                 efficiency_reward = 0.0
         else:
-            efficiency_reward = 1.0  # 没有请求时保持现状
+            # 没有请求时，线程数越少越好
+            efficiency_reward = max(0, 2.0 - (total_threads - 4) * 0.2)
         
-        # 综合奖励 (总分0-22分)
+        # 6. 稳定性奖励 (避免频繁大幅调整)
+        stability_reward = 1.0  # 基础稳定分
+        
+        # 综合奖励 (总分0-23分)
         total_reward = (
-            throughput_reward * 0.4 +      # 40% - 吞吐量完成率
-            improvement_reward * 0.3 +     # 30% - 吞吐量改善  
-            cpu_reward * 0.15 +            # 15% - CPU效率
+            throughput_reward * 0.35 +     # 35% - 吞吐量完成率
+            improvement_reward * 0.25 +    # 25% - 吞吐量改善  
+            cpu_reward * 0.2 +             # 20% - CPU效率
             memory_reward * 0.1 +          # 10% - 内存效率
-            efficiency_reward * 0.05       # 5% - 资源效率
+            efficiency_reward * 0.05 +     # 5% - 资源效率
+            stability_reward * 0.05        # 5% - 稳定性
         )
         
-        logger.info(f"奖励详情: 完成率={completion_rate:.3f}({throughput_reward:.2f}), "
-                f"改善={throughput_change}({improvement_reward:.2f}), "
-                f"CPU={cpu_util:.3f}({cpu_reward:.2f}), "
-                f"内存={memory_util:.3f}({memory_reward:.2f}), "
-                f"效率={efficiency_reward:.2f}, 总奖励={total_reward:.2f}")
+        # 记录详细信息用于调试
+        if total_requests > 0:
+            logger.info(f"奖励详情: 请求={total_requests}, 完成={completed_ops}, "
+                    f"完成率={completion_rate:.3f}({throughput_reward:.2f}), "
+                    f"改善={throughput_change if hasattr(self, 'raw_last_state') else 0}({improvement_reward:.2f}), "
+                    f"CPU={cpu_util:.3f}({cpu_reward:.2f}), "
+                    f"内存={memory_util:.3f}({memory_reward:.2f}), "
+                    f"效率={efficiency_reward:.2f}, 总奖励={total_reward:.2f}")
         
         return total_reward
-
+    
     def close(self):
         """关闭环境，停止gRPC服务器，并关闭日志文件"""
         # 关闭性能日志文件
