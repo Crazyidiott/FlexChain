@@ -427,7 +427,7 @@ bool SystemStateManager::SendStatesAndApplyConfig() {
 void* SystemStateManager::CollectionThread(void* arg) {
     SystemStateManager* manager = static_cast<SystemStateManager*>(arg);
     
-    int sampling_interval = 3 // 转换为秒
+    int sampling_interval = 5 // 转换为秒
     while (manager->running_) {
         // 睡眠指定间隔
         // usleep(1000 * manager->interval_milliseconds);
