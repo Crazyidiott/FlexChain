@@ -351,7 +351,7 @@ class FlexChainRLEnv(gym.Env):
                 thread_adj = 0
                 core_adj = 0
                 
-            if current_evict_thr + evict_thr_adj < 390000 or current_evict_thr + evict_thr_adj > 400000:
+            if current_evict_thr + evict_thr_adj < 390000 or current_evict_thr + evict_thr_adj > 398000:
                 logger.warning(f"动作修正: evict_thr调整 {evict_thr_adj} -> 0 (当前={current_evict_thr})")
                 evict_thr_adj = 0
 
