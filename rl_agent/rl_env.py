@@ -386,6 +386,7 @@ class FlexChainRLEnv(gym.Env):
         if self.simulation_mode:
             # 模拟环境步进
             new_state, sim_reward = self.sim_env.step(core_adj, thread_adj, evict_thr_adj)
+            start_time = time.time()
             
             # 更新状态
             self.last_state = self.current_state.copy() if self.current_state is not None else None
