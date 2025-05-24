@@ -512,8 +512,8 @@ void* SystemStateManager::CollectionThread(void* arg) {
         
         // 记录日志
         log_info(stderr,
-                "[State] interval_seconds=%d, interval_ops: YCSB=%d, KMEANS=%d, BANK=%d, TOTAL=%d |\n "
-                "CPU: %.2f%%, Memory: %.2f%%, Cores: %d, Threads/Core: %d, EVICT_THR: %d\n"
+                "[State] interval_seconds=%d, interval_ops: YCSB=%d, KMEANS=%d, BANK=%d, TOTAL=%d | "
+                "CPU: %.2f%%, Memory: %.2f%%, Cores: %d, Threads/Core: %d, EVICT_THR: %d\n |"
                 "cache_hit: %ld, sst_cnt: %ld, total_ops: %ld",
                 interval_time,
                 state.ycsb_ops(), state.kmeans_ops(), state.bank_ops(), state.total_ops(),

@@ -72,10 +72,12 @@ parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t z
 parser.add_argument('--server-port', type=int, default=50055, help='gRPC服务器端口')
 parser.add_argument('--results-dir', type=str, default='results', help='Directory to store results')
 parser.add_argument('--baseline-mode', action='store_true', help='if it is not rl but baseline')
+parser.add_argument('--simulation-mode', action='store_true', help='Use simulation environment instead of real system')
+parser.add_argument('--simulation-data-dir', type=str, default='processed_data', help='Directory containing CSV simulation data')
 
 # 交替训练与评估的相关参数
-parser.add_argument('--train-duration', type=int, default=1200, help='Training phase duration in seconds (default: 20 mins)')
-parser.add_argument('--eval-duration', type=int, default=600, help='Evaluation phase duration in seconds (default: 10mins   )')
+parser.add_argument('--train-duration', type=int, default=360, help='Training phase duration in seconds (default: 20 mins)')
+parser.add_argument('--eval-duration', type=int, default=160, help='Evaluation phase duration in seconds (default: 10mins   )')
 parser.add_argument('--performance-threshold', type=float, default=1.05, help='Improvement threshold to save new best model (default: 5%)')
 parser.add_argument('--degradation-threshold', type=float, default=0.9, help='Degradation threshold to rollback to best model (default: 10%)')
 
@@ -175,11 +177,14 @@ def main():
     # 创建环境
     if args.baseline_mode:
         mmm = True
+        action = 13 (0,0,0)
     else:
         mmm = False
     env = FlexChainRLEnv(
         server_port=args.server_port,
-        baseline_mode = mmm
+        baseline_mode=mmm,
+        simulation_mode=args.simulation_mode,  # 从命令行参数读取
+        simulation_data_dir=args.simulation_data_dir
     )
     
     # 获取动作空间大小
@@ -252,8 +257,8 @@ def main():
     
     training_phase = True
     steps_in_current_phase = 0
-    train_phase_length = 2000  # 每2000步一个训练阶段
-    eval_phase_length = 500    # 每500步一个评估阶段
+    train_phase_length = args.train_duration  # 每2000步一个训练阶段
+    eval_phase_length = args.eval_duration  # 每500步一个评估阶段
     
     best_model_state = None
     best_performance = -float('inf')

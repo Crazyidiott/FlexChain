@@ -15,6 +15,11 @@ from datetime import datetime
 import rl_agent_pb2
 import rl_agent_pb2_grpc
 
+try:
+    from simulation_env import SimulationEnvironment
+except ImportError:
+    SimulationEnvironment = None
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -25,7 +30,7 @@ logger = logging.getLogger('FlexChainRL')
 class FlexChainRLEnv(gym.Env):
     """FlexChain强化学习环境类"""
     
-    def __init__(self, server_port=50055, history_length=5, data_log_dir='logs/performance_data', baseline_mode = False):
+    def __init__(self, server_port=50055, history_length=5, data_log_dir='logs/performance_data', baseline_mode = False,simulation_mode=False, simulation_data_dir='processed_data'):
         super().__init__()
         
         # 初始化参数
@@ -42,6 +47,14 @@ class FlexChainRLEnv(gym.Env):
         self.steps_count = 0
         self.state_condition = threading.Condition()
         self.processing = False
+
+        self.simulation_mode = simulation_mode
+        self.simulation_data_dir = simulation_data_dir
+        if simulation_mode:
+            self.sim_env = SimulationEnvironment(simulation_data_dir)
+            logger.info("使用模拟环境模式")
+        else:
+            logger.info("使用真实环境模式")
         
         # 定义动作空间
         # 核心数调整 {-1, 0, 1}
@@ -92,9 +105,13 @@ class FlexChainRLEnv(gym.Env):
         # 初始化性能日志文件
         self._init_performance_log()
         
-        # 启动gRPC服务器
-        self._start_grpc_server()
-        logger.info(f"FlexChain RL环境初始化完成，gRPC服务运行在端口 {self.server_port}")
+        if not self.simulation_mode:
+            # 启动gRPC服务器
+            self._start_grpc_server()
+            logger.info(f"FlexChain RL环境初始化完成，gRPC服务运行在端口 {self.server_port}")
+        else:
+            logger.info("FlexChain 模拟环境初始化完成")
+
 
     def _init_performance_log(self):
         """初始化性能数据日志文件"""
@@ -308,15 +325,21 @@ class FlexChainRLEnv(gym.Env):
         """重置环境状态"""
         super().reset(seed=seed)
         
-        # 等待获取初始状态
-        while not self.latest_states:
-            logger.info("等待初始系统状态...")
-            time.sleep(1)
+        if self.simulation_mode:
+            # 模拟环境重置
+            initial_state = self.sim_env.reset()
+            self.current_state = self._normalize_state(initial_state)
+            self.raw_current_state = initial_state
+            self.latest_states = [self.current_state]
+            observation = self.current_state
+        else:
+            # 等待获取初始状态（原有逻辑）
+            while not self.latest_states:
+                logger.info("等待初始系统状态...")
+                time.sleep(1)
+            observation = self.latest_states[-1]
         
         self.steps_count = 0
-        
-        # 返回最新状态作为初始观察
-        observation = self.latest_states[-1]
         info = {}
         
         return observation, info
@@ -360,25 +383,39 @@ class FlexChainRLEnv(gym.Env):
         # 应用配置变更
         self._apply_config(core_adj, thread_adj, evict_thr_adj)
         
-        # 等待系统状态更新
-        max_wait_time = 10  # 减少等待时间到10秒
-        start_time = time.time()
-        state_updated = False
-        
-        while not state_updated and (time.time() - start_time < max_wait_time):
-            if hasattr(self, 'current_ts') and hasattr(self, 'last_ts') and self.current_ts != self.last_ts:
-                state_updated = True
-                self.last_ts = self.current_ts
-            else:
-                time.sleep(0.5)  # 减少轮询频率
-        
-        if not state_updated:
-            logger.warning(f"等待状态更新超时 ({max_wait_time}秒)")
-            # 超时时给予小的负奖励
-            reward = -1.0
-        else:
-            # 计算奖励
+        if self.simulation_mode:
+            # 模拟环境步进
+            new_state, sim_reward = self.sim_env.step(core_adj, thread_adj, evict_thr_adj)
+            
+            # 更新状态
+            self.last_state = self.current_state.copy() if self.current_state is not None else None
+            self.raw_last_state = getattr(self, 'raw_current_state', new_state.copy())
+            self.raw_current_state = new_state
+            self.current_state = self._normalize_state(new_state)
+            self.latest_states.append(self.current_state)
+            if len(self.latest_states) > self.history_length:
+                self.latest_states = self.latest_states[-self.history_length:]
+            
             reward = self._calculate_reward() if pre_action_state is not None else 0
+            
+        else:
+            # 真实环境等待逻辑（保持原有代码）
+            max_wait_time = 10
+            start_time = time.time()
+            state_updated = False
+            
+            while not state_updated and (time.time() - start_time < max_wait_time):
+                if hasattr(self, 'current_ts') and hasattr(self, 'last_ts') and self.current_ts != self.last_ts:
+                    state_updated = True
+                    self.last_ts = self.current_ts
+                else:
+                    time.sleep(0.5)
+            
+            if not state_updated:
+                logger.warning(f"等待状态更新超时 ({max_wait_time}秒)")
+                reward = -1.0
+            else:
+                reward = self._calculate_reward() if pre_action_state is not None else 0
         
         # 检查是否需要重置到baseline
         if self.steps_count % 500 == 0:  # 每500步重置一次
@@ -407,6 +444,9 @@ class FlexChainRLEnv(gym.Env):
     def _apply_config(self, core_adj, thread_adj, evict_thr_adj):
         """应用配置变更，将在下一个状态请求时返回"""
         # 存储当前的配置，将在下一次SendSystemStates或GetSystemConfig请求时返回
+        if self.simulation_mode:
+            # 模拟环境不需要gRPC配置
+            return
         if self.baseline_mode:
             self.current_config = rl_agent_pb2.SystemConfig(
                 core_adjustment=0,

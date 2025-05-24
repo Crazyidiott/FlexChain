@@ -37,6 +37,8 @@ def test_during_training(args, env, T, dqn, val_mem, metrics, results_dir, evalu
     while time.time() - start_time < test_duration:
         # 使用ε-greedy策略选择动作
         action = dqn.act_e_greedy(state)
+        if args.baseline_mode:
+            action = 13  # 如果是基线模式，选择固定动作
         
         # 执行动作
         next_state, reward, done, truncated, _ = env.step(action)
