@@ -357,7 +357,11 @@ def main():
                         dqn.update_target_net()
             
             # 定期保存检查点
-            if T % 1000 == 0:
+            if args.simulation_mode:
+                check_inteval = 100000
+            else:
+                check_inteval = 1000
+            if T % check_inteval == 0:
                 checkpoint_path = os.path.join(results_dir, f'checkpoint_{T}.pth')
                 torch.save(dqn.online_net.state_dict(), checkpoint_path)
                 save_memory(mem, args.memory, args.disable_bzip_memory)
