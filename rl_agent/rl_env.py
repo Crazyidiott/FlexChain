@@ -362,20 +362,20 @@ class FlexChainRLEnv(gym.Env):
             
             # 更严格的约束检查
             if current_core_count + core_adj < 2:
-                logger.warning(f"动作修正: 核心数调整 {core_adj} -> 0 (当前={current_core_count})")
+                #logger.warning(f"动作修正: 核心数调整 {core_adj} -> 0 (当前={current_core_count})")
                 core_adj = 0
                 
             if current_sim_count + thread_adj < 1:
-                logger.warning(f"动作修正: 线程数调整 {thread_adj} -> 0 (当前={current_sim_count})")
+                #logger.warning(f"动作修正: 线程数调整 {thread_adj} -> 0 (当前={current_sim_count})")
                 thread_adj = 0
                 
             if (current_sim_count + thread_adj) * (current_core_count + core_adj) > 31:
-                logger.warning(f"动作修正: 总线程数超限，重置调整为0")
+                #logger.warning(f"动作修正: 总线程数超限，重置调整为0")
                 thread_adj = 0
                 core_adj = 0
                 
             if current_evict_thr + evict_thr_adj < 390000 or current_evict_thr + evict_thr_adj > 398000:
-                logger.warning(f"动作修正: evict_thr调整 {evict_thr_adj} -> 0 (当前={current_evict_thr})")
+                #logger.warning(f"动作修正: evict_thr调整 {evict_thr_adj} -> 0 (当前={current_evict_thr})")
                 evict_thr_adj = 0
 
         logger.info(f"执行动作: core_adj={core_adj}, thread_adj={thread_adj}, evict_thr_adj={evict_thr_adj}")

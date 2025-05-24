@@ -32,6 +32,7 @@ class Agent():
     self.epsilon_step = 0
     self.epsilon = self.epsilon_start
     self.learn_start = args.learn_start
+    self.device = args.device
 
 
 
@@ -73,7 +74,8 @@ class Agent():
   # Acts based on single state (no batch)
   def act(self, state):
     if isinstance(state, np.ndarray):
-        state = torch.tensor(state, dtype=torch.float32)
+      state = torch.tensor(state, dtype=torch.float32)
+    state = state.to(self.device)
     if self.evaluate:
       if self.distri:
         return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
@@ -172,6 +174,9 @@ class Agent():
 
   # Evaluates Q-value based on single state (no batch)
   def evaluate_q(self, state):
+    if isinstance(state, np.ndarray):
+        state = torch.tensor(state, dtype=torch.float32)
+    state = state.to(self.device)
     if self.distri:
       with torch.no_grad():
         return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).max(1)[0].item()

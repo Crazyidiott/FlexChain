@@ -1,0 +1,1 @@
+timestamp,elapsed_seconds,ycsb_ops,kmeans_ops,bank_ops,request_total,total_ops,cpu_utilization,memory_utilization,core_count,threads_per_core,evict_threshold

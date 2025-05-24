@@ -332,8 +332,9 @@ def main():
                 dqn.update_epsilon()
             
             # 等待环境处理
-            while not env.processing:
-                time.sleep(0.1)
+            if not args.simulation_mode:
+                while not env.processing:
+                    time.sleep(0.1)
             
             next_state, reward, done, truncated, info = env.step(action)
             
