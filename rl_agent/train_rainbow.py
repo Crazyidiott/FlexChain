@@ -177,7 +177,7 @@ def main():
     # 创建环境
     if args.baseline_mode:
         mmm = True
-        action = 13 (0,0,0)
+        action = 13 #(0,0,0)
     else:
         mmm = False
     env = FlexChainRLEnv(
