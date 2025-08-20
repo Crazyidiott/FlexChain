@@ -73,6 +73,6 @@ int compute_setup_ib(struct CConfigInfo &c_config_info, struct ComputeIBInfo &c_
 int connect_qp_server(struct MConfigInfo &m_config_info, struct MemoryIBInfo &m_ib_info);
 int connect_qp_client(struct CConfigInfo &c_config_info, struct ComputeIBInfo &c_ib_info);
 
-int modify_qp_to_rts(struct ibv_qp *qp, uint32_t target_qp_num, uint16_t target_lid);
+int modify_qp_to_rts(struct ibv_qp *qp, uint32_t target_qp_num, uint16_t target_lid, const char *target_gid_raw);
 
 #endif
