@@ -283,7 +283,7 @@ string get_balance_str(uint64_t balance, size_t length) {
 }
 
 void *client_thread(void *arg) {
-    int trans_per_interval = 25;
+    int trans_per_interval = 1000;
     int interval = 50000; // 50  ms
     int min = 60 * 10 * 2; // 1 min (乘了interval之后)
 
@@ -303,27 +303,27 @@ void *client_thread(void *arg) {
         usleep(interval);
 
         // 3 分钟改一次workload类型
-        if(cnt % min == 0 && cnt != 0){
-            trans_per_interval *= 4;
-        }
-        if(cnt % (3 * min) == 0 && cnt != 0){
-            type = (type + 1) % 3;
-            // type = type;
-            if(type == 0){
-                log_info(stderr, "workload type is YCSB");
-                trans_per_interval = 25; //2000/s
-            }
-            else if(type == 1){
-                log_info(stderr, "workload type is KMEANS");
-                trans_per_interval = 5; //2000/s
-            }
-            else if(type == 2){
-                log_info(stderr, "workload type is SMALLBANK");
-                trans_per_interval = 5; //2000/s
-            }
-        }
+        // if(cnt % min == 0 && cnt != 0){
+        //     trans_per_interval *= 4;
+        // }
+        // if(cnt % (3 * min) == 0 && cnt != 0){
+        //     type = (type + 1) % 3;
+        //     // type = type;
+        //     if(type == 0){
+        //         log_info(stderr, "workload type is YCSB");
+        //         trans_per_interval = 25; //2000/s
+        //     }
+        //     else if(type == 1){
+        //         log_info(stderr, "workload type is KMEANS");
+        //         trans_per_interval = 5; //2000/s
+        //     }
+        //     else if(type == 2){
+        //         log_info(stderr, "workload type is SMALLBANK");
+        //         trans_per_interval = 5; //2000/s
+        //     }
+        // }
         
-        cnt ++;
+        // cnt ++;
         // log_info(stderr, "benchmark type is %d",type);
 
 
