@@ -406,7 +406,7 @@ void *client_thread(void *arg) {
 
 void prepopulate() {
     default_random_engine generator;
-    uniform_int_distribution<int> distribution(0, KMEANS_KEY_NUM - 1);
+    uniform_int_distribution<int> distribution(0, YCSB_KEY_NUM - 1);
 
     for (int i = YCSB_KEY_NUM; i >= 0; i--) {
         /* prepopulate - YSCB workload */
@@ -461,48 +461,48 @@ void prepopulate() {
         // sem_post(&rq.full);
     }
 
-    for (int i = KMEANS_KEY_NUM; i >= 0; i--) {
-        /* prepopulate - machine learning workload */
-        struct Request req;
-        req.type = Request::Type::PUT;
-        req.key = "key_k_" + to_string(i);
-        uint64_t val_number = distribution(generator);
-        char *buf = (char *)malloc(sizeof(uint64_t));
-        memcpy(buf, &val_number, sizeof(uint64_t));
-        req.value = string(buf, sizeof(uint64_t));
-        free(buf);
-        req.is_prep = true;
-        pthread_mutex_lock(&rq.mutex);
-        rq.rq_queue.push(req);
-        pthread_mutex_unlock(&rq.mutex);
-        sem_post(&rq.full);
-    }
+    // for (int i = KMEANS_KEY_NUM; i >= 0; i--) {
+    //     /* prepopulate - machine learning workload */
+    //     struct Request req;
+    //     req.type = Request::Type::PUT;
+    //     req.key = "key_k_" + to_string(i);
+    //     uint64_t val_number = distribution(generator);
+    //     char *buf = (char *)malloc(sizeof(uint64_t));
+    //     memcpy(buf, &val_number, sizeof(uint64_t));
+    //     req.value = string(buf, sizeof(uint64_t));
+    //     free(buf);
+    //     req.is_prep = true;
+    //     pthread_mutex_lock(&rq.mutex);
+    //     rq.rq_queue.push(req);
+    //     pthread_mutex_unlock(&rq.mutex);
+    //     sem_post(&rq.full);
+    // }
 
-    for(int i = BANK_KEY_NUM; i >= 0; i--) {
-        /* prepopulate - smallbank workload */
-        struct Request req;
-        req.type = Request::Type::PUT;
-        req.key = "checking_" + to_string(i);
-        uint64_t balance = distribution(generator);
-        char *buf = (char *)malloc(sizeof(uint64_t));
-        memcpy(buf, &balance, sizeof(uint64_t));
-        req.value = string(buf, sizeof(uint64_t));
-        req.is_prep = true;
-        pthread_mutex_lock(&rq.mutex);
-        rq.rq_queue.push(req);
-        pthread_mutex_unlock(&rq.mutex);
-        sem_post(&rq.full);
+    // for(int i = BANK_KEY_NUM; i >= 0; i--) {
+    //     /* prepopulate - smallbank workload */
+    //     struct Request req;
+    //     req.type = Request::Type::PUT;
+    //     req.key = "checking_" + to_string(i);
+    //     uint64_t balance = distribution(generator);
+    //     char *buf = (char *)malloc(sizeof(uint64_t));
+    //     memcpy(buf, &balance, sizeof(uint64_t));
+    //     req.value = string(buf, sizeof(uint64_t));
+    //     req.is_prep = true;
+    //     pthread_mutex_lock(&rq.mutex);
+    //     rq.rq_queue.push(req);
+    //     pthread_mutex_unlock(&rq.mutex);
+    //     sem_post(&rq.full);
 
-        req.key = "saving_" + to_string(i);
-        balance = distribution(generator);
-        memcpy(buf, &balance, sizeof(uint64_t));
-        req.value = string(buf, sizeof(uint64_t));
-        free(buf);
-        pthread_mutex_lock(&rq.mutex);
-        rq.rq_queue.push(req);
-        pthread_mutex_unlock(&rq.mutex);
-        sem_post(&rq.full);
-    }
+    //     req.key = "saving_" + to_string(i);
+    //     balance = distribution(generator);
+    //     memcpy(buf, &balance, sizeof(uint64_t));
+    //     req.value = string(buf, sizeof(uint64_t));
+    //     free(buf);
+    //     pthread_mutex_lock(&rq.mutex);
+    //     rq.rq_queue.push(req);
+    //     pthread_mutex_unlock(&rq.mutex);
+    //     sem_post(&rq.full);
+    // }
 
     sleep(5);
 

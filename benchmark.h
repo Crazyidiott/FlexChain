@@ -20,7 +20,7 @@ using namespace std;
 
 #define FALSE 0
 #define TRUE 1
-#define YCSB_KEY_NUM 4000
+#define YCSB_KEY_NUM 10000
 #define KMEANS_KEY_NUM 4000
 #define BANK_KEY_NUM 2000
 
